@@ -60,6 +60,18 @@
 	"sa_discord_penalty_warn": "Advertencia registrada",
 	"sa_discord_penalty_unknown": "Registro desconocido",
 
+	"sa_player_penalty_info_active_mute": "➔ Silencio [{lightred}❌{default}] - Expira [{lightred}{0}{default}]",
+	"sa_player_penalty_info_active_gag": "➔ Bloqueo [{lightred}❌{default}] - Expira [{lightred}{0}{default}]",
+	"sa_player_penalty_info_active_silence": "➔ Silencio total [{lightred}❌{default}] - Expira [{lightred}{0}{default}]",
+	"sa_player_penalty_info_active_warn": "➔ Advertencia [{lightred}❌{default}] - Expira [{lightred}{0}{default}] - Razón [{lightred}{1}{default}]",
+
+	"sa_player_penalty_info_no_active_mute": "➔ Silencio [{lime}✔{default}]",
+	"sa_player_penalty_info_no_active_gag": "➔ Bloqueo [{lime}✔{default}]",
+	"sa_player_penalty_info_no_active_silence": "➔ Silencio total [{lime}✔{default}]",
+	"sa_player_penalty_info_no_active_warn": "➔ Advertencia [{lime}✔{default}]",
+
+	"sa_player_penalty_info": "===========================\nPenalizaciones del jugador para {lightred}{0}{default},\nNúmero de prohibiciones: {lightred}{1}{default}, Número de bloqueos: {lightred}{2}{default}, Número de silencios: {lightred}{3}{default}, Número de silencios totales: {lightred}{4}{default}, Número de advertencias: {lightred}{5}{default}\nPenalizaciones activas:\n{6}\nAdvertencias activas:\n{7}\n===========================",
+	"sa_admin_penalty_info": "{grey}Penalizaciones del jugador para {lightred}{0}{grey}, prohibiciones: {lightred}{1}{grey}, bloqueos: {lightred}{2}{grey}, silencios: {lightred}{3}{grey}, silencios totales: {lightred}{4}{grey}, advertencias: {lightred}{5}",
 	"sa_player_ban_message_time": "Has sido baneado por {lightred}{0}{default} durante {lightred}{1}{default} minutos por {lightred}{2}{default}!",
 	"sa_player_ban_message_perm": "Has sido baneado permanentemente por {lightred}{0}{default} por {lightred}{1}{default}!",
 	"sa_player_kick_message": "Has sido expulsado por {lightred}{0}{default} durante {lightred}{1}{default}!",

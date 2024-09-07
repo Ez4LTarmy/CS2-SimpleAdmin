@@ -60,6 +60,18 @@
 	"sa_discord_penalty_warn": "Brīdinājums reģistrēts",
 	"sa_discord_penalty_unknown": "Nezināms reģistrēts",
 
+	"sa_player_penalty_info_active_mute": "➔ Izslēgt skaņu [{lightred}❌{default}] - Beidzas [{lightred}{0}{default}]",
+	"sa_player_penalty_info_active_gag": "➔ Apklusināt [{lightred}❌{default}] - Beidzas [{lightred}{0}{default}]",
+	"sa_player_penalty_info_active_silence": "➔ Klusums [{lightred}❌{default}] - Beidzas [{lightred}{0}{default}]",
+	"sa_player_penalty_info_active_warn": "➔ Brīdinājums [{lightred}❌{default}] - Beidzas [{lightred}{0}{default}] - Iemesls [{lightred}{1}{default}]",
+
+	"sa_player_penalty_info_no_active_mute": "➔ Izslēgt skaņu [{lime}✔{default}]",
+	"sa_player_penalty_info_no_active_gag": "➔ Apklusināt [{lime}✔{default}]",
+	"sa_player_penalty_info_no_active_silence": "➔ Klusums [{lime}✔{default}]",
+	"sa_player_penalty_info_no_active_warn": "➔ Brīdinājums [{lime}✔{default}]",
+
+	"sa_player_penalty_info": "===========================\nSpēlētāja sods {lightred}{0}{default},\nAizliegumu skaits: {lightred}{1}{default}, Apklusinājumu skaits: {lightred}{2}{default}, Izslēgšanas skaits: {lightred}{3}{default}, Klusuma periodi: {lightred}{4}{default}, Brīdinājumu skaits: {lightred}{5}{default}\nAktīvie sodi:\n{6}\nAktīvie brīdinājumi:\n{7}\n===========================",
+	"sa_admin_penalty_info": "{grey}Spēlētāja sods {lightred}{0}{grey}, aizliegumi: {lightred}{1}{grey}, apklusinājumi: {lightred}{2}{grey}, izslēgšanas: {lightred}{3}{grey}, klusuma periodi: {lightred}{4}{grey}, brīdinājumi: {lightred}{5}",
 	"sa_player_ban_message_time": "Tu esi nobanots uz {lightred}{0}{default} uz {lightred}{1}{default} minūtēm, iemesls: {lightred}{2}{default}!",
 	"sa_player_ban_message_perm": "Tevis bans ir uz mūžu, iemesls: {lightred}{0}{default}, Admins: {lightred}{1}{default}!",
 	"sa_player_kick_message": "Tu esi izmests, iemesls: {lightred}{0}{default}, Admins: {lightred}{1}{default}!",

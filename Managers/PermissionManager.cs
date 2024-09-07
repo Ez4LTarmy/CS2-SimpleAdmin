@@ -1,12 +1,12 @@
-﻿using CounterStrikeSharp.API;
+﻿using System.Collections.Concurrent;
+using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Modules.Entities;
 using Dapper;
 using Microsoft.Extensions.Logging;
 using MySqlConnector;
 using Newtonsoft.Json;
-using System.Collections.Concurrent;
 
-namespace CS2_SimpleAdmin;
+namespace CS2_SimpleAdmin.Managers;
 
 public class PermissionManager(Database.Database database)
 {
@@ -17,7 +17,7 @@ public class PermissionManager(Database.Database database)
 	/*
 	public async Task<List<(List<string>, int)>> GetAdminFlags(string steamId)
 	{
-		DateTime now = DateTime.UtcNow.ToLocalTime();
+		DateTime now = DateTime.UtcNow;
 
 		await using MySqlConnection connection = await _database.GetConnectionAsync();
 
@@ -59,7 +59,7 @@ public class PermissionManager(Database.Database database)
 
 	private async Task<List<(string, string, List<string>, int, DateTime?)>> GetAllPlayersFlags()
 	{
-		var now = DateTime.UtcNow.ToLocalTime();
+		var now = DateTime.UtcNow;
 
 		try
 		{
@@ -390,7 +390,7 @@ public class PermissionManager(Database.Database database)
 	{
 		if (string.IsNullOrEmpty(playerSteamId) || flagsList.Count == 0) return;
 
-		var now = DateTime.UtcNow.ToLocalTime();
+		var now = DateTime.UtcNow;
 		DateTime? futureTime;
 
 		if (time != 0)
@@ -525,7 +525,7 @@ public class PermissionManager(Database.Database database)
 			await using var connection = await database.GetConnectionAsync();
 
 			const string sql = "DELETE FROM sa_admins WHERE ends IS NOT NULL AND ends <= @CurrentTime";
-			await connection.ExecuteAsync(sql, new { CurrentTime = DateTime.UtcNow.ToLocalTime() });
+			await connection.ExecuteAsync(sql, new { CurrentTime = DateTime.UtcNow });
 		}
 		catch (Exception)
 		{

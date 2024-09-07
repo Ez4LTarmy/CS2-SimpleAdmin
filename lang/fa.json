@@ -60,6 +60,18 @@
 	"sa_discord_penalty_warn": "هشدار ثبت شد",
 	"sa_discord_penalty_unknown": "ناشناخته انجام شده",
 
+	"sa_player_penalty_info_active_mute": "➔ قطع صدا [{lightred}❌{default}] - انقضا [{lightred}{0}{default}]",
+	"sa_player_penalty_info_active_gag": "➔ قطع گفتار [{lightred}❌{default}] - انقضا [{lightred}{0}{default}]",
+	"sa_player_penalty_info_active_silence": "➔ سکوت [{lightred}❌{default}] - انقضا [{lightred}{0}{default}]",
+	"sa_player_penalty_info_active_warn": "➔ هشدار [{lightred}❌{default}] - انقضا [{lightred}{0}{default}] - دلیل [{lightred}{1}{default}]",
+
+	"sa_player_penalty_info_no_active_mute": "➔ قطع صدا [{lime}✔{default}]",
+	"sa_player_penalty_info_no_active_gag": "➔ قطع گفتار [{lime}✔{default}]",
+	"sa_player_penalty_info_no_active_silence": "➔ سکوت [{lime}✔{default}]",
+	"sa_player_penalty_info_no_active_warn": "➔ هشدار [{lime}✔{default}]",
+
+	"sa_player_penalty_info": "===========================\nمجازات‌های بازیکن برای {lightred}{0}{default},\nتعداد ممنوعیت‌ها: {lightred}{1}{default}, تعداد قطع گفتارها: {lightred}{2}{default}, تعداد قطع صداها: {lightred}{3}{default}, تعداد سکوت‌ها: {lightred}{4}{default}, تعداد هشدارها: {lightred}{5}{default}\nمجازات‌های فعال:\n{6}\nهشدارهای فعال:\n{7}\n===========================",
+	"sa_admin_penalty_info": "{grey}مجازات‌های بازیکن برای {lightred}{0}{grey}، ممنوعیت‌ها: {lightred}{1}{grey}، قطع گفتارها: {lightred}{2}{grey}، قطع صداها: {lightred}{3}{grey}، سکوت‌ها: {lightred}{4}{grey}، هشدارها: {lightred}{5}",
 	"sa_player_ban_message_time": "شما توسط {lightred}{2}{default} برای {lightred}{1}{default} دقیقه به دلیل {lightred}{0}{default} مسدود شده‌اید!",
 	"sa_player_ban_message_perm": "شما توسط {lightred}{1}{default} به دلیل {lightred}{0}{default} برای همیشه مسدود شده‌اید!",
 	"sa_player_kick_message": "شما توسط {lightred}{1}{default} به دلیل {lightred}{0}{default} اخراج شده‌اید!",

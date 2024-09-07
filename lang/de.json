@@ -60,6 +60,18 @@
 	"sa_discord_penalty_warn": "Warnung registriert",
 	"sa_discord_penalty_unknown": "Unbekanntes registriert",
 
+	"sa_player_penalty_info_active_mute": "➔ Stummschaltung [{lightred}❌{default}] - Ablauf [{lightred}{0}{default}]",
+	"sa_player_penalty_info_active_gag": "➔ Maulkorb [{lightred}❌{default}] - Ablauf [{lightred}{0}{default}]",
+	"sa_player_penalty_info_active_silence": "➔ Schweigen [{lightred}❌{default}] - Ablauf [{lightred}{0}{default}]",
+	"sa_player_penalty_info_active_warn": "➔ Warnung [{lightred}❌{default}] - Ablauf [{lightred}{0}{default}] - Grund [{lightred}{1}{default}]",
+
+	"sa_player_penalty_info_no_active_mute": "➔ Stummschaltung [{lime}✔{default}]",
+	"sa_player_penalty_info_no_active_gag": "➔ Maulkorb [{lime}✔{default}]",
+	"sa_player_penalty_info_no_active_silence": "➔ Schweigen [{lime}✔{default}]",
+	"sa_player_penalty_info_no_active_warn": "➔ Warnung [{lime}✔{default}]",
+
+	"sa_player_penalty_info": "===========================\nSpielerbestrafungen für {lightred}{0}{default},\nAnzahl der Banns: {lightred}{1}{default}, Anzahl der Maulkörbe: {lightred}{2}{default}, Anzahl der Stummschaltungen: {lightred}{3}{default}, Anzahl der Schweigezeiten: {lightred}{4}{default}, Anzahl der Warnungen: {lightred}{5}{default}\nAktive Strafen:\n{6}\nAktive Warnungen:\n{7}\n===========================",
+	"sa_admin_penalty_info": "{grey}Spielerbestrafungen für {lightred}{0}{grey}, Banns: {lightred}{1}{grey}, Maulkörbe: {lightred}{2}{grey}, Stummschaltungen: {lightred}{3}{grey}, Schweigezeiten: {lightred}{4}{grey}, Warnungen: {lightred}{5}",
 	"sa_player_ban_message_time": "Du wurdest wegen {lightred}{0}{default} für {lightred}{1}{default} Minuten von {lightred}{2}{default} gebannt!",
 	"sa_player_ban_message_perm": "Du wurdest wegen {lightred}{0}{default} von {lightred}{1}{default} permanent gebannt!",
 	"sa_player_kick_message": "Du wurdest wegen {lightred}{0}{default} von {lightred}{1}{default} gekickt!",

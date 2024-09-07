@@ -1,3 +1,4 @@
+using System.Globalization;
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Core.Attributes.Registration;
@@ -8,6 +9,8 @@ using CounterStrikeSharp.API.Modules.Cvars;
 using CounterStrikeSharp.API.Modules.Entities;
 using CounterStrikeSharp.API.Modules.Menu;
 using CounterStrikeSharp.API.Modules.Utils;
+using CS2_SimpleAdmin.Enums;
+using CS2_SimpleAdmin.Managers;
 using CS2_SimpleAdmin.Menus;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -20,13 +23,13 @@ namespace CS2_SimpleAdmin
 		[CommandHelper(whoCanExecute: CommandUsage.SERVER_ONLY)]
 		public void OnSaUpgradeCommand(CCSPlayerController? caller, CommandInfo command)
 		{
-			if (caller != null || _database == null) return;
+			if (caller != null || Database == null) return;
 
 			Task.Run(async () =>
 			{
 				try
 				{
-					await using var connection = await _database.GetConnectionAsync();
+					await using var connection = await Database.GetConnectionAsync();
 					var commandText = "ALTER TABLE `sa_mutes` CHANGE `type` `type` ENUM('GAG','MUTE', 'SILENCE', '') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'GAG';";
 
 					await using var commandSql = connection.CreateCommand();
@@ -51,6 +54,115 @@ namespace CS2_SimpleAdmin
 				catch (Exception ex)
 				{
 					Logger.LogError(ex.Message);
+				}
+			});
+		}
+		
+		[ConsoleCommand("css_penalties")]
+		[ConsoleCommand("css_mypenalties")]
+		[ConsoleCommand("css_comms")]
+		[CommandHelper(whoCanExecute: CommandUsage.CLIENT_ONLY)]
+		public void OnPenaltiesCommand(CCSPlayerController? caller, CommandInfo command)
+		{
+			if (caller == null || caller.IsValid == false || !caller.UserId.HasValue || Database == null)
+				return;
+			
+			var userId = caller.UserId.Value;
+			
+			Task.Run(async () =>
+			{
+				// Initialize managers
+				MuteManager muteManager = new(Database);
+				WarnManager warnManager = new(Database);
+
+				try
+				{
+					var warns = await warnManager.GetPlayerWarns(PlayersInfo[userId], false);
+
+					// Check if the player is muted
+					var activeMutes = await muteManager.IsPlayerMuted(PlayersInfo[userId].SteamId.SteamId64.ToString());
+					
+					Dictionary<PenaltyType, List<string>> mutesList = new()
+					{
+						{ PenaltyType.Gag, [] },
+						{ PenaltyType.Mute, [] },
+						{ PenaltyType.Silence, [] }
+					};
+
+					List<string> warnsList = [];
+
+					bool found = false;
+					foreach (var warn in warns.TakeWhile(warn => (string)warn.status == "ACTIVE"))
+					{
+						DateTime ends = warn.ends;
+						if (_localizer == null) continue;
+						using (new WithTemporaryCulture(caller.GetLanguage()))
+							warnsList.Add(_localizer["sa_player_penalty_info_active_warn", ends.ToLocalTime().ToString(CultureInfo.CurrentCulture), (string)warn.reason]);
+						found = true;
+					}
+
+					if (!found)
+					{
+						if (_localizer != null)
+							warnsList.Add(_localizer["sa_player_penalty_info_no_active_warn"]);
+					}
+
+					if (activeMutes.Count > 0)
+					{
+						foreach (var mute in activeMutes)
+						{
+							string muteType = mute.type;
+							DateTime ends = mute.ends;
+							using (new WithTemporaryCulture(caller.GetLanguage()))
+							{
+								switch (muteType)
+								{
+									// Apply mute penalty based on mute type
+									case "GAG":
+										if (_localizer != null)
+											mutesList[PenaltyType.Gag].Add(_localizer["sa_player_penalty_info_active_gag", ends.ToLocalTime().ToString(CultureInfo.CurrentCulture)]);
+										break;
+									case "MUTE":
+										if (_localizer != null)
+											mutesList[PenaltyType.Mute].Add(_localizer["sa_player_penalty_info_active_mute", ends.ToLocalTime().ToString(CultureInfo.CurrentCulture)]);
+										break;
+									default:
+										if (_localizer != null)
+											mutesList[PenaltyType.Silence].Add(_localizer["sa_player_penalty_info_active_silence", ends.ToLocalTime().ToString(CultureInfo.CurrentCulture)]);
+										break;
+								}
+							}
+						}
+					}
+
+					if (_localizer != null)
+					{
+						if (mutesList[PenaltyType.Gag].Count == 0)
+							mutesList[PenaltyType.Gag].Add(_localizer["sa_player_penalty_info_no_active_gag"]);
+						if (mutesList[PenaltyType.Mute].Count == 0)
+							mutesList[PenaltyType.Mute].Add(_localizer["sa_player_penalty_info_no_active_mute"]);
+						if (mutesList[PenaltyType.Silence].Count == 0)
+							mutesList[PenaltyType.Silence].Add(_localizer["sa_player_penalty_info_no_active_silence"]);
+					}
+					
+					await Server.NextFrameAsync(() =>
+					{
+						caller.SendLocalizedMessage(_localizer, "sa_player_penalty_info",
+						[
+							caller.PlayerName, 
+							PlayersInfo[userId].TotalBans,
+							PlayersInfo[userId].TotalGags,
+							PlayersInfo[userId].TotalMutes,
+							PlayersInfo[userId].TotalSilences,
+							PlayersInfo[userId].TotalWarns,
+							string.Join("\n", mutesList.SelectMany(kvp => kvp.Value)),
+							string.Join("\n", warnsList)
+						]);
+					});
+				}
+				catch (Exception ex)
+				{
+					_logger?.LogError($"Error processing player information: {ex}");
 				}
 			});
 		}
@@ -96,7 +208,7 @@ namespace CS2_SimpleAdmin
 		[RequiresPermissions("@css/root")]
 		public void OnAddAdminCommand(CCSPlayerController? caller, CommandInfo command)
 		{
-			if (_database == null) return;
+			if (Database == null) return;
 
 
 			if (!Helper.ValidateSteamId(command.GetArg(1), out var steamId) || steamId == null)
@@ -130,8 +242,8 @@ namespace CS2_SimpleAdmin
 
 		public static void AddAdmin(CCSPlayerController? caller, string steamid, string name, string flags, int immunity, int time = 0, bool globalAdmin = false, CommandInfo? command = null)
 		{
-			if (_database == null) return;
-			PermissionManager adminManager = new(_database);
+			if (Database == null) return;
+			PermissionManager adminManager = new(Database);
 
 			var flagsList = flags.Split(',').Select(flag => flag.Trim()).ToList();
 			_ = adminManager.AddAdminBySteamId(steamid, name, flagsList, immunity, time, globalAdmin);
@@ -152,7 +264,7 @@ namespace CS2_SimpleAdmin
 		[RequiresPermissions("@css/root")]
 		public void OnDelAdminCommand(CCSPlayerController? caller, CommandInfo command)
 		{
-			if (_database == null) return;
+			if (Database == null) return;
 
 			if (!Helper.ValidateSteamId(command.GetArg(1), out var steamId) || steamId == null)
 			{
@@ -167,8 +279,8 @@ namespace CS2_SimpleAdmin
 
 		public void RemoveAdmin(CCSPlayerController? caller, string steamid, bool globalDelete = false, CommandInfo? command = null)
 		{
-			if (_database == null) return;
-			PermissionManager adminManager = new(_database);
+			if (Database == null) return;
+			PermissionManager adminManager = new(Database);
 			_ = adminManager.DeleteAdminBySteamId(steamid, globalDelete);
 
 			AddTimer(2, () =>
@@ -200,7 +312,7 @@ namespace CS2_SimpleAdmin
 		[RequiresPermissions("@css/root")]
 		public void OnAddGroup(CCSPlayerController? caller, CommandInfo command)
 		{
-			if (_database == null) return;
+			if (Database == null) return;
 
 			if (!command.GetArg(1).StartsWith("#"))
 			{
@@ -224,8 +336,8 @@ namespace CS2_SimpleAdmin
 
 		private static void AddGroup(CCSPlayerController? caller, string name, string flags, int immunity, bool globalGroup, CommandInfo? command = null)
 		{
-			if (_database == null) return;
-			PermissionManager adminManager = new(_database);
+			if (Database == null) return;
+			PermissionManager adminManager = new(Database);
 
 			var flagsList = flags.Split(',').Select(flag => flag.Trim()).ToList();
 			_ = adminManager.AddGroup(name, flagsList, immunity, globalGroup);
@@ -246,7 +358,7 @@ namespace CS2_SimpleAdmin
 		[RequiresPermissions("@css/root")]
 		public void OnDelGroupCommand(CCSPlayerController? caller, CommandInfo command)
 		{
-			if (_database == null) return;
+			if (Database == null) return;
 
 			if (!command.GetArg(1).StartsWith($"#"))
 			{
@@ -261,8 +373,8 @@ namespace CS2_SimpleAdmin
 
 		private void RemoveGroup(CCSPlayerController? caller, string name, CommandInfo? command = null)
 		{
-			if (_database == null) return;
-			PermissionManager adminManager = new(_database);
+			if (Database == null) return;
+			PermissionManager adminManager = new(Database);
 			_ = adminManager.DeleteGroup(name);
 
 			AddTimer(2, () =>
@@ -286,7 +398,7 @@ namespace CS2_SimpleAdmin
 		[RequiresPermissions("@css/root")]
 		public void OnRelAdminCommand(CCSPlayerController? caller, CommandInfo command)
 		{
-			if (_database == null) return;
+			if (Database == null) return;
 
 			ReloadAdmins(caller);
 
@@ -295,7 +407,7 @@ namespace CS2_SimpleAdmin
 
 		public void ReloadAdmins(CCSPlayerController? caller)
 		{
-			if (_database == null) return;
+			if (Database == null) return;
 
 			for (var index = 0; index < PermissionManager.AdminCache.Keys.ToList().Count; index++)
 			{
@@ -306,15 +418,15 @@ namespace CS2_SimpleAdmin
 				AdminManager.RemovePlayerAdminData(steamId);
 			}
 
-			PermissionManager adminManager = new(_database);
+			PermissionManager adminManager = new(Database);
 
 			Task.Run(async () =>
 			{
 				await adminManager.CrateGroupsJsonFile();
 				await adminManager.CreateAdminsJsonFile();
 
-				var adminsFile = await File.ReadAllTextAsync(Instance.ModuleDirectory + "/data/admins.json") ?? "";
-				var groupsFile = await File.ReadAllTextAsync(Instance.ModuleDirectory + "/data/groups.json") ?? "";
+				var adminsFile = await File.ReadAllTextAsync(Instance.ModuleDirectory + "/data/admins.json");
+				var groupsFile = await File.ReadAllTextAsync(Instance.ModuleDirectory + "/data/groups.json");
 
 				await Server.NextFrameAsync(() =>
 				{
@@ -366,37 +478,24 @@ namespace CS2_SimpleAdmin
 		[RequiresPermissions("@css/generic")]
 		public void OnWhoCommand(CCSPlayerController? caller, CommandInfo command)
 		{
-			if (_database == null) return;
+			if (Database == null) return;
 
 			var targets = GetTarget(command);
 			if (targets == null) return;
 
 			Helper.LogCommand(caller, command);
-			//Helper.SendDiscordLogMessage(caller, command, _discordWebhookClientLog, _localizer);
 
 			var playersToTarget = targets.Players.Where(player => player is { IsValid: true, IsHLTV: false }).ToList();
-
-			Database.Database database = new(_dbConnectionString);
-			BanManager banManager = new(database, Config);
-			MuteManager muteManager = new(_database);
 
 			playersToTarget.ForEach(player =>
 			{
 				if (!player.UserId.HasValue) return;
 				if (!caller!.CanTarget(player)) return;
-				PlayerInfo playerInfo = new()
-				{
-					UserId = player.UserId.Value,
-					SteamId = player.SteamID.ToString(),
-					Name = player.PlayerName,
-					IpAddress = player.IpAddress?.Split(":")[0]
-				};
+				
+				var playerInfo = PlayersInfo[player.UserId.Value];
 
 				Task.Run(async () =>
 				{
-					var totalBans = await banManager.GetPlayerBans(playerInfo);
-					var totalMutes = await muteManager.GetPlayerMutes(playerInfo.SteamId);
-
 					await Server.NextFrameAsync(() =>
 					{
 						Action<string> printMethod = caller == null ? Server.PrintToConsole : caller.PrintToConsole;
@@ -405,20 +504,22 @@ namespace CS2_SimpleAdmin
 
 						printMethod($"• Clan: \"{player.Clan}\" Name: \"{playerInfo.Name}\"");
 						printMethod($"• UserID: \"{playerInfo.UserId}\"");
-						if (playerInfo.SteamId != null)
-							printMethod($"• SteamID64: \"{playerInfo.SteamId}\"");
+						printMethod($"• SteamID64: \"{playerInfo.SteamId.SteamId64}\"");
 						if (player.Connected == PlayerConnectedState.PlayerConnected)
 						{
-							printMethod($"• SteamID2: \"{player.SteamID}\"");
-							printMethod($"• Community link: \"{new SteamID(player.SteamID).ToCommunityUrl()}\"");
+							printMethod($"• SteamID2: \"{playerInfo.SteamId.SteamId2}\"");
+							printMethod($"• Community link: \"{playerInfo.SteamId.ToCommunityUrl()}\"");
 						}
 						if (playerInfo.IpAddress != null && AdminManager.PlayerHasPermissions(caller, "@css/showip"))
 							printMethod($"• IP Address: \"{playerInfo.IpAddress}\"");
 						printMethod($"• Ping: \"{player.Ping}\"");
 						if (player.Connected == PlayerConnectedState.PlayerConnected)
 						{
-							printMethod($"• Total Bans: \"{totalBans}\"");
-							printMethod($"• Total Mutes: \"{totalMutes}\"");
+							printMethod($"• Total Bans: \"{playerInfo.TotalBans}\"");
+							printMethod($"• Total Gags: \"{playerInfo.TotalGags}\"");
+							printMethod($"• Total Mutes: \"{playerInfo.TotalMutes}\"");
+							printMethod($"• Total Silences: \"{playerInfo.TotalSilences}\"");
+							printMethod($"• Total Warns: \"{playerInfo.TotalWarns}\"");
 						}
 
 						printMethod($"--------- END INFO ABOUT \"{player.PlayerName}\" ---------");
@@ -428,11 +529,11 @@ namespace CS2_SimpleAdmin
 		}
 		
 		[ConsoleCommand("css_warns")]
-		[CommandHelper(minArgs: 1, usage: "<#userid or name>", whoCanExecute: CommandUsage.CLIENT_AND_SERVER)]
+		[CommandHelper(minArgs: 1, usage: "<#userid or name>", whoCanExecute: CommandUsage.CLIENT_ONLY)]
 		[RequiresPermissions("@css/kick")]
 		public void OnWarnsCommand(CCSPlayerController? caller, CommandInfo command)
 		{
-			if (_database == null) return;
+			if (Database == null) return;
 			
 			var targets = GetTarget(command);
 			if (targets == null) return;
@@ -444,7 +545,7 @@ namespace CS2_SimpleAdmin
 			if (playersToTarget.Count > 1)
 				return;
 			
-			Database.Database database = new(_dbConnectionString);
+			Database.Database database = new(DbConnectionString);
 			WarnManager warnManager = new(database);
 
 			playersToTarget.ForEach(player =>
@@ -452,7 +553,7 @@ namespace CS2_SimpleAdmin
 				if (!player.UserId.HasValue) return;
 				if (!caller!.CanTarget(player)) return;
 
-				var steamid = player.SteamID.ToString();
+				var userId = player.UserId.Value;
 				
 				BaseMenu warnsMenu = Config.UseChatMenu
 					? new ChatMenu(_localizer!["sa_admin_warns_menu_title", player.PlayerName])
@@ -460,7 +561,7 @@ namespace CS2_SimpleAdmin
 
 				Task.Run(async () =>
 				{
-					var warnsList = await warnManager.GetPlayerWarns(steamid, false);
+					var warnsList = await warnManager.GetPlayerWarns(PlayersInfo[userId], false);
 					var sortedWarns = warnsList
 						.OrderBy(warn => (string)warn.status == "ACTIVE" ? 0 : 1)
 						.ThenByDescending(warn => (int)warn.id)
@@ -471,7 +572,7 @@ namespace CS2_SimpleAdmin
 						warnsMenu.AddMenuOption($"[{((string)w.status == "ACTIVE" ? $"{ChatColors.LightRed}X" : $"{ChatColors.Lime}✔️")}{ChatColors.Default}] {(string)w.reason}",
 							(controller, option) =>
 							{
-								_ = warnManager.UnwarnPlayer(steamid, (int)w.id);
+								_ = warnManager.UnwarnPlayer(PlayersInfo[userId], (int)w.id);
 								player.PrintToChat(_localizer["sa_admin_warns_unwarn", player.PlayerName, (string)w.reason]);
 							});
 					});
@@ -566,7 +667,7 @@ namespace CS2_SimpleAdmin
 			var playersToTarget = targets.Players
 				.Where(player => player is { IsValid: true, IsHLTV: false }).ToList();
 
-			if (playersToTarget.Count > 1 && Config.DisableDangerousCommands || playersToTarget.Count == 0)
+			if (playersToTarget.Count > 1 && Config.OtherSettings.DisableDangerousCommands || playersToTarget.Count == 0)
 			{
 				return;
 			}
@@ -603,16 +704,24 @@ namespace CS2_SimpleAdmin
 				if (!player.IsBot)
 					using (new WithTemporaryCulture(player.GetLanguage()))
 					{
-						player.PrintToCenter(_localizer!["sa_player_kick_message", reason, callerName]);
+						switch (Config.OtherSettings.ShowActivityType)
+						{
+							case 1:
+								player.PrintToCenter(_localizer!["sa_player_kick_message", reason, caller == null ? "Console" : _localizer["sa_admin"]]);
+								break;
+							case 2:
+								player.PrintToCenter(_localizer!["sa_player_kick_message", reason, caller == null ? "Console" : caller.PlayerName]);
+								break;
+						}
 					}
 				if (player.UserId.HasValue)
-					AddTimer(Config.KickTime, () => Helper.KickPlayer(player.UserId.Value, reason),
+					AddTimer(Config.OtherSettings.KickTime, () => Helper.KickPlayer(player.UserId.Value),
 						CounterStrikeSharp.API.Modules.Timers.TimerFlags.STOP_ON_MAPCHANGE);
 			}
 			else
 			{
 				if (player.UserId.HasValue)
-					AddTimer(Config.KickTime, () => Helper.KickPlayer(player.UserId.Value),
+					AddTimer(Config.OtherSettings.KickTime, () => Helper.KickPlayer(player.UserId.Value),
 						CounterStrikeSharp.API.Modules.Timers.TimerFlags.STOP_ON_MAPCHANGE);
 			}
 
@@ -620,11 +729,25 @@ namespace CS2_SimpleAdmin
 			foreach (var controller in Helper.GetValidPlayers().Where(controller => controller is { IsValid: true, IsBot: false }))
 			{
 				if (_localizer != null)
-					controller.SendLocalizedMessage(_localizer,
-										"sa_admin_kick_message",
-										callerName,
-										player?.PlayerName ?? string.Empty,
-										reason);
+				{
+					switch (Instance.Config.OtherSettings.ShowActivityType)
+					{
+						case 1:
+							controller.SendLocalizedMessage(_localizer,
+								"sa_admin_kick_message",
+								"",
+								player?.PlayerName ?? string.Empty,
+								reason);
+							break;
+						case 2:
+							controller.SendLocalizedMessage(_localizer,
+								"sa_admin_kick_message",
+								callerName,
+								player?.PlayerName ?? string.Empty,
+								reason);
+							break;
+					}
+				}
 			}
 		}
 
@@ -678,10 +801,23 @@ namespace CS2_SimpleAdmin
 				foreach (var player in Helper.GetValidPlayers())
 				{
 					if (_localizer != null)
-						player.SendLocalizedMessage(_localizer,
-											"sa_admin_changemap_message",
-											caller == null ? "Console" : caller.PlayerName,
-											map);
+					{
+						switch (Instance.Config.OtherSettings.ShowActivityType)
+						{
+							case 1:
+								player.SendLocalizedMessage(_localizer,
+									"sa_admin_changemap_message",
+									"",
+									map);
+								break;
+							case 2:
+								player.SendLocalizedMessage(_localizer,
+									"sa_admin_changemap_message",
+									caller == null ? "Console" : caller.PlayerName,
+									map);
+								break;
+						}
+					}
 				}
 			}
 
@@ -710,10 +846,23 @@ namespace CS2_SimpleAdmin
 				foreach (var player in Helper.GetValidPlayers())
 				{
 					if (_localizer != null)
-						player.SendLocalizedMessage(_localizer,
-											"sa_admin_changemap_message",
-											caller == null ? "Console" : caller.PlayerName,
-											map);
+					{
+						switch (Instance.Config.OtherSettings.ShowActivityType)
+						{
+							case 1:
+								player.SendLocalizedMessage(_localizer,
+									"sa_admin_changemap_message",
+									"",
+									map);
+								break;
+							case 2:
+								player.SendLocalizedMessage(_localizer,
+									"sa_admin_changemap_message",
+									caller == null ? "Console" : caller.PlayerName,
+									map);
+								break;
+						}
+					}
 				}
 			}
 

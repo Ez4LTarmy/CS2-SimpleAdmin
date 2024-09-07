@@ -59,7 +59,19 @@
 	"sa_discord_penalty_silence": "Nowe uciszenie",
 	"sa_discord_penalty_warn": "Nowe ostrzeżenie",
 	"sa_discord_penalty_unknown": "Nowa nieznana blokada",
+	
+	"sa_player_penalty_info_active_mute": "➔ Zakneblowanie [{lightred}❌{default}] - Wygasa [{lightred}{0}{default}]",
+	"sa_player_penalty_info_active_gag": "➔ Wyciszenie [{lightred}❌{default}] - Wygasa [{lightred}{0}{default}]",
+	"sa_player_penalty_info_active_silence": "➔ Uciszenie [{lightred}❌{default}] - Wygasa [{lightred}{0}{default}]",
+	"sa_player_penalty_info_active_warn": "➔ Ostrzeżenie [{lightred}❌{default}] - Wygasa [{lightred}{0}{default}] - Powód [{lightred}{1}{default}]",
+	
+	"sa_player_penalty_info_no_active_mute": "➔ Zakneblowanie [{lime}✔{default}]",
+	"sa_player_penalty_info_no_active_gag": "➔ Wyciszenie [{lime}✔{default}]",
+	"sa_player_penalty_info_no_active_silence": "➔ Uciszenie [{lime}✔{default}]",
+	"sa_player_penalty_info_no_active_warn": "➔ Ostrzeżenie [{lime}✔{default}]",
 
+	"sa_player_penalty_info": "===========================\nBlokady gracza {lightred}{0}{default},\nIlość banów: {lightred}{1}{default}, Ilość zakneblowań: {lightred}{2}{default}, Ilość wyciszeń: {lightred}{3}{default}, Ilość uciszeń: {lightred}{4}{default}Ilość ostrzeżeń: {lightred}{5}{default}\nAktywne blokady:\n{6}\nAktywne ostrzeżenia:\n{7}\n===========================",
+	"sa_admin_penalty_info": "{grey}Blokady gracza {lightred}{0}{grey}, bany: {lightred}{1}{grey}, zakneblowania: {lightred}{2}{grey}, wyciszenia: {lightred}{3}{grey}, uciszenia: {lightred}{4}{grey}, ostrzeżenia: {lightred}{5}",
 	"sa_player_ban_message_time": "Zostałeś zbanowany za {lightred}{0}{default} na {lightred}{1}{default} minut przez {lightred}{2}{default}!",
 	"sa_player_ban_message_perm": "Zostałeś zbanowany na zawsze za {lightred}{0}{default} przez {lightred}{1}{default}!",
 	"sa_player_kick_message": "Zostałeś wyrzucony za {lightred}{0}{default} przez {lightred}{1}{default}!",

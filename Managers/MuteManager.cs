@@ -1,15 +1,15 @@
-﻿using Dapper;
+﻿using CounterStrikeSharp.API.Modules.Entities;
+using CS2_SimpleAdmin.Models;
+using Dapper;
 using Microsoft.Extensions.Logging;
 
-namespace CS2_SimpleAdmin;
+namespace CS2_SimpleAdmin.Managers;
 
 internal class MuteManager(Database.Database database)
 {
-	public async Task MutePlayer(PlayerInfo player, PlayerInfo issuer, string reason, int time = 0, int type = 0)
+	public async Task MutePlayer(PlayerInfo player, PlayerInfo? issuer, string reason, int time = 0, int type = 0)
 	{
-		if (player.SteamId == null) return;
-
-		var now = DateTime.UtcNow.ToLocalTime();
+		var now = DateTime.UtcNow;
 		var futureTime = now.AddMinutes(time);
 
 		var muteType = type switch
@@ -24,14 +24,14 @@ internal class MuteManager(Database.Database database)
 			await using var connection = await database.GetConnectionAsync();
 			const string sql =
 				"INSERT INTO `sa_mutes` (`player_steamid`, `player_name`, `admin_steamid`, `admin_name`, `reason`, `duration`, `ends`, `created`, `type`, `server_id`) " +
-							   "VALUES (@playerSteamid, @playerName, @adminSteamid, @adminName, @muteReason, @duration, @ends, @created, @type, @serverid)";
+				"VALUES (@playerSteamid, @playerName, @adminSteamid, @adminName, @muteReason, @duration, @ends, @created, @type, @serverid)";
 
 			await connection.ExecuteAsync(sql, new
 			{
-				playerSteamid = player.SteamId,
+				playerSteamid = player.SteamId.SteamId64.ToString(),
 				playerName = player.Name,
-				adminSteamid = issuer.SteamId ?? "Console",
-				adminName = issuer.SteamId == null ? "Console" : issuer.Name,
+				adminSteamid = issuer?.SteamId.SteamId64.ToString() ?? "Console",
+				adminName = issuer?.Name ?? "Console",
 				muteReason = reason,
 				duration = time,
 				ends = futureTime,
@@ -40,15 +40,18 @@ internal class MuteManager(Database.Database database)
 				serverid = CS2_SimpleAdmin.ServerId
 			});
 		}
-		catch { };
+		catch(Exception ex)
+		{	
+			CS2_SimpleAdmin._logger?.LogError(ex.Message);	
+		};
 	}
 
-	public async Task AddMuteBySteamid(string playerSteamId, PlayerInfo issuer, string reason, int time = 0, int type = 0)
+	public async Task AddMuteBySteamid(string playerSteamId, PlayerInfo? issuer, string reason, int time = 0, int type = 0)
 	{
 		if (string.IsNullOrEmpty(playerSteamId)) return;
 
 
-		var now = DateTime.UtcNow.ToLocalTime();
+		var now = DateTime.UtcNow;
 		var futureTime = now.AddMinutes(time);
 
 		var muteType = type switch
@@ -67,8 +70,8 @@ internal class MuteManager(Database.Database database)
 			await connection.ExecuteAsync(sql, new
 			{
 				playerSteamid = playerSteamId,
-				adminSteamid = issuer.SteamId ?? "Console",
-				adminName = issuer.Name ?? "Console",
+				adminSteamid = issuer?.SteamId.SteamId64.ToString() ?? "Console",
+				adminName = issuer?.Name ?? "Console",
 				muteReason = reason,
 				duration = time,
 				ends = futureTime,
@@ -95,18 +98,18 @@ internal class MuteManager(Database.Database database)
 		try
 		{
 			await using var connection = await database.GetConnectionAsync();
-			var currentTime = DateTime.UtcNow.ToLocalTime();
+			var currentTime = DateTime.UtcNow;
 			var sql = "";
 
 			if (CS2_SimpleAdmin.Instance.Config.MultiServerMode)
 			{
-				sql = CS2_SimpleAdmin.Instance.Config.TimeMode == 1
+				sql = CS2_SimpleAdmin.Instance.Config.OtherSettings.TimeMode == 1
 					? "SELECT * FROM sa_mutes WHERE player_steamid = @PlayerSteamID AND status = 'ACTIVE' AND (duration = 0 OR ends > @CurrentTime)"
 					: "SELECT * FROM sa_mutes WHERE player_steamid = @PlayerSteamID AND status = 'ACTIVE' AND (duration = 0 OR duration > COALESCE(passed, 0))";
 			}
 			else
 			{
-				sql = CS2_SimpleAdmin.Instance.Config.TimeMode == 1
+				sql = CS2_SimpleAdmin.Instance.Config.OtherSettings.TimeMode == 1
 					? "SELECT * FROM sa_mutes WHERE player_steamid = @PlayerSteamID AND status = 'ACTIVE' AND (duration = 0 OR ends > @CurrentTime) AND server_id = @serverid"
 					: "SELECT * FROM sa_mutes WHERE player_steamid = @PlayerSteamID AND status = 'ACTIVE' AND (duration = 0 OR duration > COALESCE(passed, 0)) AND server_id = @serverid";
 
@@ -122,17 +125,24 @@ internal class MuteManager(Database.Database database)
 		}
 	}
 
-	public async Task<int> GetPlayerMutes(string steamId)
+	public async Task<int> GetPlayerMutes(PlayerInfo playerInfo, int type = 0)
 	{
 		try
 		{
+			var muteType = type switch
+			{
+				1 => "MUTE",
+				2 => "SILENCE",
+				_ => "GAG"
+			};
+			
 			await using var connection = await database.GetConnectionAsync();
 
 			var sql = CS2_SimpleAdmin.Instance.Config.MultiServerMode
-				? "SELECT COUNT(*) FROM sa_mutes WHERE player_steamid = @PlayerSteamID"
-				: "SELECT COUNT(*) FROM sa_mutes WHERE player_steamid = @PlayerSteamID AND server_id = @serverid";
+				? "SELECT COUNT(*) FROM sa_mutes WHERE player_steamid = @PlayerSteamID AND type = @MuteType"
+				: "SELECT COUNT(*) FROM sa_mutes WHERE player_steamid = @PlayerSteamID AND server_id = @serverid AND type = @MuteType";
 
-			var muteCount = await connection.ExecuteScalarAsync<int>(sql, new { PlayerSteamID = steamId, serverid = CS2_SimpleAdmin.ServerId });
+			var muteCount = await connection.ExecuteScalarAsync<int>(sql, new { PlayerSteamID = playerInfo.SteamId.SteamId64.ToString(), serverid = CS2_SimpleAdmin.ServerId, MuteType = muteType });
 			return muteCount;
 		}
 		catch (Exception)
@@ -151,12 +161,6 @@ internal class MuteManager(Database.Database database)
 			var sql = CS2_SimpleAdmin.Instance.Config.MultiServerMode
 				? "UPDATE `sa_mutes` SET passed = COALESCE(passed, 0) + 1 WHERE (player_steamid = @PlayerSteamID) AND duration > 0 AND status = 'ACTIVE'"
 				: "UPDATE `sa_mutes` SET passed = COALESCE(passed, 0) + 1 WHERE (player_steamid = @PlayerSteamID) AND duration > 0 AND status = 'ACTIVE' AND server_id = @serverid";
-			/*
-			foreach (var (IpAddress, SteamID, UserId, Slot) in players)
-			{
-				await connection.ExecuteAsync(sql,
-					new { PlayerSteamID = SteamID, serverid = CS2_SimpleAdmin.ServerId });
-			}*/
 
 			for (var i = 0; i < players.Count; i += batchSize)
 			{
@@ -270,18 +274,18 @@ internal class MuteManager(Database.Database database)
 
 			if (CS2_SimpleAdmin.Instance.Config.MultiServerMode)
 			{
-				sql = CS2_SimpleAdmin.Instance.Config.TimeMode == 1
+				sql = CS2_SimpleAdmin.Instance.Config.OtherSettings.TimeMode == 1
 					? "UPDATE sa_mutes SET status = 'EXPIRED' WHERE status = 'ACTIVE' AND `duration` > 0 AND ends <= @CurrentTime"
 					: "UPDATE sa_mutes SET status = 'EXPIRED' WHERE status = 'ACTIVE' AND `duration` > 0 AND `passed` >= `duration`";
 			}
 			else
 			{
-				sql = CS2_SimpleAdmin.Instance.Config.TimeMode == 1
+				sql = CS2_SimpleAdmin.Instance.Config.OtherSettings.TimeMode == 1
 					? "UPDATE sa_mutes SET status = 'EXPIRED' WHERE status = 'ACTIVE' AND `duration` > 0 AND ends <= @CurrentTime AND server_id = @serverid"
 					: "UPDATE sa_mutes SET status = 'EXPIRED' WHERE status = 'ACTIVE' AND `duration` > 0 AND `passed` >= `duration` AND server_id = @serverid";
 			}
 
-			await connection.ExecuteAsync(sql, new { CurrentTime = DateTime.UtcNow.ToLocalTime(), serverid = CS2_SimpleAdmin.ServerId });
+			await connection.ExecuteAsync(sql, new { CurrentTime = DateTime.UtcNow, serverid = CS2_SimpleAdmin.ServerId });
 		}
 		catch (Exception)
 		{

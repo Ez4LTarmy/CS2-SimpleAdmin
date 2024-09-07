@@ -1,4 +1,5 @@
-﻿using CounterStrikeSharp.API;
+﻿using System.Globalization;
+using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Core.Translations;
 using CounterStrikeSharp.API.Modules.Admin;
@@ -6,6 +7,10 @@ using CounterStrikeSharp.API.Modules.Entities;
 using CounterStrikeSharp.API.Modules.Memory;
 using Microsoft.Extensions.Localization;
 using System.Text;
+using CounterStrikeSharp.API.Modules.Timers;
+using CounterStrikeSharp.API.Modules.Utils;
+using Discord;
+using Microsoft.Extensions.Logging;
 using Vector = CounterStrikeSharp.API.Modules.Utils.Vector;
 
 namespace CS2_SimpleAdmin;
@@ -178,8 +183,8 @@ public static class PlayerExtensions
 		var random = new Random();
 		var vel = new Vector(pawn.AbsVelocity.X, pawn.AbsVelocity.Y, pawn.AbsVelocity.Z);
 
-		vel.X += ((random.Next(180) + 50) * ((random.Next(2) == 1) ? -1 : 1));
-		vel.Y += ((random.Next(180) + 50) * ((random.Next(2) == 1) ? -1 : 1));
+		vel.X += (random.Next(180) + 50) * (random.Next(2) == 1 ? -1 : 1);
+		vel.Y += (random.Next(180) + 50) * (random.Next(2) == 1 ? -1 : 1);
 		vel.Z += random.Next(200) + 100;
 
 		pawn.AbsVelocity.X = vel.X;
@@ -195,20 +200,42 @@ public static class PlayerExtensions
 		if (pawn.Health <= 0)
 			pawn.CommitSuicide(true, true);
 	}
-
-	public static void SendLocalizedMessage(this CCSPlayerController? controller, IStringLocalizer localizer, string messageKey, params object[] messageArgs)
+  
+	public static void SendLocalizedMessage(this CCSPlayerController? controller, IStringLocalizer? localizer,
+		string messageKey, params object[] messageArgs)
 	{
-		if (controller == null) return;
+		if (controller == null || localizer == null) return;
 
 		using (new WithTemporaryCulture(controller.GetLanguage()))
 		{
-			StringBuilder sb = new(localizer["sa_prefix"]);
+			StringBuilder sb = new();
 			sb.Append(localizer[messageKey, messageArgs]);
+			
 			foreach (var part in Helper.SeparateLines(sb.ToString()))
 			{
-				controller.PrintToChat(part);
+				var lineWithPrefix = localizer["sa_prefix"] + part.Trim();
+				controller.PrintToChat(lineWithPrefix);
 			}
 		}
 	}
+	
+	public static void SendLocalizedMessageCenter(this CCSPlayerController? controller, IStringLocalizer? localizer,
+		string messageKey, params object[] messageArgs)
+	{
+		if (controller == null || localizer == null) return;
 
+		using (new WithTemporaryCulture(controller.GetLanguage()))
+		{
+			StringBuilder sb = new();
+			sb.Append(localizer[messageKey, messageArgs]);
+			
+			foreach (var part in Helper.SeparateLines(sb.ToString()))
+			{
+				string _part;
+				_part = Helper.CenterMessage(part);
+				var lineWithPrefix = localizer["sa_prefix"] + _part;
+				controller.PrintToChat(lineWithPrefix);
+			}
+		}
+	}
 }

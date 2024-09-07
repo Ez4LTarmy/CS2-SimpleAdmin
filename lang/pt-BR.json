@@ -60,6 +60,18 @@
 	"sa_discord_penalty_warn": "Aviso registrado",
 	"sa_discord_penalty_unknown": "Desconhecido registrado",
 
+	"sa_player_penalty_info_active_mute": "➔ Mudo [{lightred}❌{default}] - Expira [{lightred}{0}{default}]",
+	"sa_player_penalty_info_active_gag": "➔ Amordaçar [{lightred}❌{default}] - Expira [{lightred}{0}{default}]",
+	"sa_player_penalty_info_active_silence": "➔ Silenciar [{lightred}❌{default}] - Expira [{lightred}{0}{default}]",
+	"sa_player_penalty_info_active_warn": "➔ Advertência [{lightred}❌{default}] - Expira [{lightred}{0}{default}] - Motivo [{lightred}{1}{default}]",
+
+	"sa_player_penalty_info_no_active_mute": "➔ Mudo [{lime}✔{default}]",
+	"sa_player_penalty_info_no_active_gag": "➔ Amordaçar [{lime}✔{default}]",
+	"sa_player_penalty_info_no_active_silence": "➔ Silenciar [{lime}✔{default}]",
+	"sa_player_penalty_info_no_active_warn": "➔ Advertência [{lime}✔{default}]",
+
+	"sa_player_penalty_info": "===========================\nPenalidades do jogador para {lightred}{0}{default},\nNúmero de banimentos: {lightred}{1}{default}, Número de amordaçamentos: {lightred}{2}{default}, Número de mudez: {lightred}{3}{default}, Número de silenciamentos: {lightred}{4}{default}, Número de advertências: {lightred}{5}{default}\nPenalidades ativas:\n{6}\nAdvertências ativas:\n{7}\n===========================",
+	"sa_admin_penalty_info": "{grey}Penalidades do jogador para {lightred}{0}{grey}, banimentos: {lightred}{1}{grey}, amordaçamentos: {lightred}{2}{grey}, mudez: {lightred}{3}{grey}, silenciamentos: {lightred}{4}{grey}, advertências: {lightred}{5}",
 	"sa_player_ban_message_time": "Você foi banido por {lightred}{0}{default} por {lightred}{1}{default} minutos por {lightred}{2}{default}!",
 	"sa_player_ban_message_perm": "Você foi banido permanentemente por {lightred}{0}{default} por {lightred}{1}{default}!",
 	"sa_player_kick_message": "Você foi expulso por {lightred}{0}{default} por {lightred}{1}{default}!",

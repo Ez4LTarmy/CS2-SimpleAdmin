@@ -1,15 +1,14 @@
-﻿using Dapper;
+﻿using CS2_SimpleAdmin.Models;
+using Dapper;
 using Microsoft.Extensions.Logging;
 
-namespace CS2_SimpleAdmin;
+namespace CS2_SimpleAdmin.Managers;
 
 internal class WarnManager(Database.Database database)
 {
-	public async Task WarnPlayer(PlayerInfo player, PlayerInfo issuer, string reason, int time = 0)
+	public async Task WarnPlayer(PlayerInfo player, PlayerInfo? issuer, string reason, int time = 0)
 	{
-		if (player.SteamId == null) return;
-
-		var now = DateTime.UtcNow.ToLocalTime();
+		var now = DateTime.UtcNow;
 		var futureTime = now.AddMinutes(time);
 
 		try
@@ -21,10 +20,10 @@ internal class WarnManager(Database.Database database)
 
 			await connection.ExecuteAsync(sql, new
 			{
-				playerSteamid = player.SteamId,
+				playerSteamid = player.SteamId.SteamId64.ToString(),
 				playerName = player.Name,
-				adminSteamid = issuer.SteamId ?? "Console",
-				adminName = issuer.SteamId == null ? "Console" : issuer.Name,
+				adminSteamid = issuer?.SteamId.SteamId64.ToString() ?? "Console",
+				adminName = issuer?.Name ?? "Console",
 				muteReason = reason,
 				duration = time,
 				ends = futureTime,
@@ -35,12 +34,12 @@ internal class WarnManager(Database.Database database)
 		catch { };
 	}
 
-	public async Task AddWarnBySteamid(string playerSteamId, PlayerInfo issuer, string reason, int time = 0)
+	public async Task AddWarnBySteamid(string playerSteamId, PlayerInfo? issuer, string reason, int time = 0)
 	{
 		if (string.IsNullOrEmpty(playerSteamId)) return;
 
 
-		var now = DateTime.UtcNow.ToLocalTime();
+		var now = DateTime.UtcNow;
 		var futureTime = now.AddMinutes(time);
 
 		try
@@ -52,8 +51,8 @@ internal class WarnManager(Database.Database database)
 			await connection.ExecuteAsync(sql, new
 			{
 				playerSteamid = playerSteamId,
-				adminSteamid = issuer.SteamId ?? "Console",
-				adminName = issuer.Name ?? "Console",
+				adminSteamid = issuer?.SteamId.ToString() ?? "Console",
+				adminName = issuer?.Name ?? "Console",
 				muteReason = reason,
 				duration = time,
 				ends = futureTime,
@@ -64,7 +63,7 @@ internal class WarnManager(Database.Database database)
 		catch { };
 	}
 	
-	public async Task<IEnumerable<dynamic>> GetPlayerWarns(string steamId, bool active = true)
+	public async Task<List<dynamic>> GetPlayerWarns(PlayerInfo player, bool active = true)
 	{
 		try
 		{
@@ -85,10 +84,10 @@ internal class WarnManager(Database.Database database)
 					: "SELECT * FROM sa_warns WHERE player_steamid = @PlayerSteamID AND server_id = @serverid ORDER BY id DESC";
 			}
 
-			var parameters = new { PlayerSteamID = steamId, serverid = CS2_SimpleAdmin.ServerId };
+			var parameters = new { PlayerSteamID = player.SteamId.SteamId64.ToString(), serverid = CS2_SimpleAdmin.ServerId };
 			var warns = await connection.QueryAsync<dynamic>(sql, parameters);
 
-			return warns;
+			return warns.ToList();
 		}
 		catch (Exception)
 		{
@@ -119,7 +118,7 @@ internal class WarnManager(Database.Database database)
 		}
 	}
 
-	public async Task UnwarnPlayer(string steamid, int warnId)
+	public async Task UnwarnPlayer(PlayerInfo player, int warnId)
 	{
 		try
 		{
@@ -129,7 +128,7 @@ internal class WarnManager(Database.Database database)
 				? "UPDATE sa_warns SET status = 'EXPIRED' WHERE status = 'ACTIVE' AND player_steamid = @steamid AND id = @warnId"
 				: "UPDATE sa_warns SET status = 'EXPIRED' WHERE status = 'ACTIVE' AND player_steamid = @steamid AND id = @warnId AND server_id = @serverid";
 
-			await connection.ExecuteAsync(sql, new { steamid, warnId, serverid = CS2_SimpleAdmin.ServerId });
+			await connection.ExecuteAsync(sql, new { steamid = player.SteamId.SteamId64.ToString(), warnId, serverid = CS2_SimpleAdmin.ServerId });
 		}
 		catch (Exception ex) 
 		{
@@ -147,7 +146,7 @@ internal class WarnManager(Database.Database database)
 				? "UPDATE sa_warns SET status = 'EXPIRED' WHERE status = 'ACTIVE' AND `duration` > 0 AND ends <= @CurrentTime"
 				: "UPDATE sa_warns SET status = 'EXPIRED' WHERE status = 'ACTIVE' AND `duration` > 0 AND ends <= @CurrentTime AND server_id = @serverid";
 
-			await connection.ExecuteAsync(sql, new { CurrentTime = DateTime.UtcNow.ToLocalTime(), serverid = CS2_SimpleAdmin.ServerId });
+			await connection.ExecuteAsync(sql, new { CurrentTime = DateTime.UtcNow, serverid = CS2_SimpleAdmin.ServerId });
 		}
 		catch (Exception ex) 
 		{

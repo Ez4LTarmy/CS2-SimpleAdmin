@@ -33,6 +33,24 @@ namespace CS2_SimpleAdmin
 										utf8String);
 			}
 		}
+		
+		[ConsoleCommand("css_cssay", "Say custom text to all players - u can use color tags.")]
+		[CommandHelper(1, "<message>")]
+		[RequiresPermissions("@css/chat")]
+		public void OnAdminCustomSayCommand(CCSPlayerController? caller, CommandInfo command)
+		{
+			if (command.GetCommandString[command.GetCommandString.IndexOf(' ')..].Length == 0) return;
+
+			var utf8BytesString = Encoding.UTF8.GetBytes(command.GetCommandString[command.GetCommandString.IndexOf(' ')..]);
+			var utf8String = Encoding.UTF8.GetString(utf8BytesString);
+
+			Helper.LogCommand(caller, command);
+
+			foreach (var player in Helper.GetValidPlayers())
+			{
+				player.PrintToChat(utf8String.ReplaceColorTags());
+			}
+		}
 
 		[ConsoleCommand("css_say", "Say to all players.")]
 		[CommandHelper(1, "<message>")]
@@ -51,7 +69,7 @@ namespace CS2_SimpleAdmin
 				if (_localizer != null)
 					player.SendLocalizedMessage(_localizer,
 										"sa_adminsay_prefix",
-										utf8String);
+										utf8String.ReplaceColorTags());
 			}
 		}
 
@@ -79,7 +97,7 @@ namespace CS2_SimpleAdmin
 				player.PrintToChat($"({callerName}) {utf8String}".ReplaceColorTags());
 			});
 
-			command.ReplyToCommand($" Private message sent!".ReplaceColorTags());
+			command.ReplyToCommand($" Private message sent!");
 		}
 
 		[ConsoleCommand("css_csay", "Say to all players (in center).")]

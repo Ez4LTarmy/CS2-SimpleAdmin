@@ -1,13 +1,7 @@
 ﻿using System.Collections.Concurrent;
+using CS2_SimpleAdmin.Enums;
 
-namespace CS2_SimpleAdmin;
-
-public enum PenaltyType
-{
-	Mute,
-	Gag,
-	Silence
-}
+namespace CS2_SimpleAdmin.Managers;
 
 public class PlayerPenaltyManager
 {
@@ -47,10 +41,10 @@ public class PlayerPenaltyManager
 			!penaltyDict.TryGetValue(penaltyType, out var penaltiesList)) return false;
 		//Console.WriteLine($"Found penalties for player with slot {slot} and penalty type {penaltyType}");
 		
-		if (CS2_SimpleAdmin.Instance.Config.TimeMode == 0)
+		if (CS2_SimpleAdmin.Instance.Config.OtherSettings.TimeMode == 0)
 			return penaltiesList.Count != 0;
 
-		var now = DateTime.UtcNow.ToLocalTime();
+		var now = DateTime.UtcNow;
 
 		// Check if any active penalties exist
 		foreach (var penalty in penaltiesList.ToList())
@@ -147,7 +141,7 @@ public class PlayerPenaltyManager
 	// Remove all expired penalties for all players and penalty types
 	public static void RemoveExpiredPenalties()
 	{
-		if (CS2_SimpleAdmin.Instance.Config.TimeMode == 0)
+		if (CS2_SimpleAdmin.Instance.Config.OtherSettings.TimeMode == 0)
 		{
 			foreach (var (playerSlot, penaltyDict) in Penalties.ToList()) // Use ToList to avoid modification while iterating
 			{
@@ -167,7 +161,7 @@ public class PlayerPenaltyManager
 			return;
 		}
 		
-		var now = DateTime.UtcNow.ToLocalTime();
+		var now = DateTime.UtcNow;
 		foreach (var (playerSlot, penaltyDict) in Penalties.ToList()) // Use ToList to avoid modification while iterating
 		{
 			// Remove expired penalties for the player

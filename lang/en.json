@@ -57,9 +57,21 @@
 	"sa_discord_penalty_mute": "Mute registered",
 	"sa_discord_penalty_gag": "Gag registered",
 	"sa_discord_penalty_silence": "Silence registered",
-	"sa_discord_warn_silence": "Warn registered",
+	"sa_discord_penalty_warn": "Warn registered",
 	"sa_discord_penalty_unknown": "Unknown registered",
 
+	"sa_player_penalty_info_active_mute": "➔ Mute [{lightred}❌{default}] - Expire [{lightred}{0}{default}]",
+	"sa_player_penalty_info_active_gag": "➔ Gag [{lightred}❌{default}] - Expire [{lightred}{0}{default}]",
+	"sa_player_penalty_info_active_silence": "➔ Silence [{lightred}❌{default}] - Expire [{lightred}{0}{default}]",
+	"sa_player_penalty_info_active_warn": "➔ Warn [{lightred}❌{default}] - Expire [{lightred}{0}{default}] - Reason [{lightred}{1}{default}]",
+
+	"sa_player_penalty_info_no_active_mute": "➔ Mute [{lime}✔{default}]",
+	"sa_player_penalty_info_no_active_gag": "➔ Gag [{lime}✔{default}]",
+	"sa_player_penalty_info_no_active_silence": "➔ Silence [{lime}✔{default}]",
+	"sa_player_penalty_info_no_active_warn": "➔ Warn [{lime}✔{default}]",
+
+	"sa_player_penalty_info": "===========================\nPlayer penalties for {lightred}{0}{default},\nNumber of bans: {lightred}{1}{default}, Number of gags: {lightred}{2}{default}, Number of mutes: {lightred}{3}{default}, Number of silences: {lightred}{4}{default}, Number of warnings: {lightred}{5}{default}\nActive penalties:\n{6}\nActive warnings:\n{7}\n===========================",
+	"sa_admin_penalty_info": "{grey}Player penalties for {lightred}{0}{grey}, bans: {lightred}{1}{grey}, gags: {lightred}{2}{grey}, mutes: {lightred}{3}{grey}, silences: {lightred}{4}{grey}, warns: {lightred}{5}",
 	"sa_player_ban_message_time": "You have been banned for {lightred}{0}{default} for {lightred}{1}{default} minutes by {lightred}{2}{default}!",
 	"sa_player_ban_message_perm": "You have been banned permanently for {lightred}{0}{default} by {lightred}{1}{default}!",
 	"sa_player_kick_message": "You have been kicked for {lightred}{0}{default} by {lightred}{1}{default}!",

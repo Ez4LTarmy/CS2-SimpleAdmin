@@ -8,40 +8,42 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using MySqlConnector;
 using System.Collections.Concurrent;
+using CS2_SimpleAdmin.Managers;
+using CS2_SimpleAdmin.Models;
 
 namespace CS2_SimpleAdmin;
 
-[MinimumApiVersion(253)]
+[MinimumApiVersion(260)]
 public partial class CS2_SimpleAdmin : BasePlugin, IPluginConfig<CS2_SimpleAdminConfig>
 {
-	public static CS2_SimpleAdmin Instance { get; private set; } = new();
+	internal static CS2_SimpleAdmin Instance { get; private set; } = new();
 
 	public static IStringLocalizer? _localizer;
 	public static readonly Dictionary<string, int> VoteAnswers = [];
-	private static bool _serverLoaded;
+	public static bool ServerLoaded;
 	private static readonly HashSet<int> GodPlayers = [];
 	private static readonly HashSet<int> SilentPlayers = [];
-	private static readonly ConcurrentBag<string> BannedPlayers = [];
-	private static readonly Dictionary<ulong, string> RenamedPlayers = [];
-	//private static readonly ConcurrentBag<int> SilentPlayers = [];
-	private static bool _tagsDetected;
-	public static bool VoteInProgress = false;
+	internal static readonly ConcurrentBag<string?> BannedPlayers = [];
+	internal static readonly Dictionary<ulong, string> RenamedPlayers = [];
+	public static bool TagsDetected;
+	public static bool VoteInProgress;
 	public static int? ServerId = null;
-	private static readonly bool UnlockedCommands = CoreConfig.UnlockConCommands;
+	public static readonly bool UnlockedCommands = CoreConfig.UnlockConCommands;
+	internal static readonly Dictionary<int, PlayerInfo> PlayersInfo = [];
+	internal static readonly List<DisconnectedPlayer> DisconnectedPlayers = [];
 
-	public static DiscordWebhookClient? DiscordWebhookClientLog;
-	// public static DiscordWebhookClient? DiscordWebhookClientPenalty;
+	internal static DiscordWebhookClient? DiscordWebhookClientLog;
 
-	private string _dbConnectionString = string.Empty;
-	private static Database.Database? _database;
+	internal string DbConnectionString = string.Empty;
+	internal static Database.Database? Database;
 
 	internal static ILogger? _logger;
-
 	private static MemoryFunctionVoid<CBasePlayerController, CCSPlayerPawn, bool, bool>? _cBasePlayerControllerSetPawnFunc;
+	
 	public override string ModuleName => "CS2-SimpleAdmin" + (Helper.IsDebugBuild ? " (DEBUG)" : " (RELEASE)");
 	public override string ModuleDescription => "Simple admin plugin for Counter-Strike 2 :)";
 	public override string ModuleAuthor => "daffyy & Dliix66";
-	public override string ModuleVersion => "1.5.2c";
+	public override string ModuleVersion => "1.6.0a";
 
 	public CS2_SimpleAdminConfig Config { get; set; } = new();
 
@@ -53,9 +55,20 @@ public partial class CS2_SimpleAdmin : BasePlugin, IPluginConfig<CS2_SimpleAdmin
 
 		if (hotReload)
 		{
-			_serverLoaded = false;
+			ServerLoaded = false;
 			OnGameServerSteamAPIActivated();
 			OnMapStart(string.Empty);
+
+			AddTimer(2.0f, () =>
+			{
+				if (Database == null) return;
+				
+				Helper.GetValidPlayers().ForEach(player =>
+				{
+					var playerManager = new PlayerManager();
+					playerManager.LoadPlayerData(player);
+				});
+			});
 		}
 
 		_cBasePlayerControllerSetPawnFunc = new MemoryFunctionVoid<CBasePlayerController, CCSPlayerPawn, bool, bool>(GameData.GetSignature("CBasePlayerController_SetPawn"));
@@ -65,7 +78,7 @@ public partial class CS2_SimpleAdmin : BasePlugin, IPluginConfig<CS2_SimpleAdmin
 	{
 		if (hotReload) return;
 
-		RemoveListener(OnMapStart);
+		RemoveListener<Listeners.OnMapStart>(OnMapStart);
 		RemoveCommandListener("say", OnCommandSay, HookMode.Post);
 		RemoveCommandListener("say_team", OnCommandTeamSay, HookMode.Post);
 	}
@@ -97,17 +110,17 @@ public partial class CS2_SimpleAdmin : BasePlugin, IPluginConfig<CS2_SimpleAdmin
 			MaximumPoolSize = 640,
 		};
 
-		_dbConnectionString = builder.ConnectionString;
-		_database = new Database.Database(_dbConnectionString);
+		DbConnectionString = builder.ConnectionString;
+		Database = new Database.Database(DbConnectionString);
 
-		if (!_database.CheckDatabaseConnection())
+		if (!Database.CheckDatabaseConnection())
 		{
 			Logger.LogError("Unable connect to database!");
 			Unload(false);
 			return;
 		}
 
-		Task.Run(() => _database.DatabaseMigration());
+		Task.Run(() => Database.DatabaseMigration());
 
 		Config = config;
 		Helper.UpdateConfig(config);
@@ -145,22 +158,5 @@ public partial class CS2_SimpleAdmin : BasePlugin, IPluginConfig<CS2_SimpleAdmin
 
 		command.ReplyToCommand($"Multiple targets found for \"{command.GetArg(1)}\".");
 		return null;
-	}
-
-	private static void RemoveFromConcurrentBag(ConcurrentBag<int> bag, int playerSlot)
-	{
-		List<int> tempList = [];
-		while (!bag.IsEmpty)
-		{
-			if (bag.TryTake(out var item) && item != playerSlot)
-			{
-				tempList.Add(item);
-			}
-		}
-
-		foreach (var item in tempList)
-		{
-			bag.Add(item);
-		}
 	}
 }

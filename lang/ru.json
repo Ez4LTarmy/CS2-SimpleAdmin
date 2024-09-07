@@ -60,6 +60,18 @@
 	"sa_discord_penalty_warn": "Предупреждение зарегистрировано",
 	"sa_discord_penalty_unknown": "Неизвестно зарегистрировано",
 
+	"sa_player_penalty_info_active_mute": "➔ Отключение звука [{lightred}❌{default}] - Истекает [{lightred}{0}{default}]",
+	"sa_player_penalty_info_active_gag": "➔ Заглушка [{lightred}❌{default}] - Истекает [{lightred}{0}{default}]",
+	"sa_player_penalty_info_active_silence": "➔ Тишина [{lightred}❌{default}] - Истекает [{lightred}{0}{default}]",
+	"sa_player_penalty_info_active_warn": "➔ Предупреждение [{lightred}❌{default}] - Истекает [{lightred}{0}{default}] - Причина [{lightred}{1}{default}]",
+
+	"sa_player_penalty_info_no_active_mute": "➔ Отключение звука [{lime}✔{default}]",
+	"sa_player_penalty_info_no_active_gag": "➔ Заглушка [{lime}✔{default}]",
+	"sa_player_penalty_info_no_active_silence": "➔ Тишина [{lime}✔{default}]",
+	"sa_player_penalty_info_no_active_warn": "➔ Предупреждение [{lime}✔{default}]",
+
+	"sa_player_penalty_info": "===========================\nШтрафы игрока для {lightred}{0}{default},\nКоличество банов: {lightred}{1}{default}, Количество заглушек: {lightred}{2}{default}, Количество отключений звука: {lightred}{3}{default}, Количество периодов тишины: {lightred}{4}{default}, Количество предупреждений: {lightred}{5}{default}\nАктивные штрафы:\n{6}\nАктивные предупреждения:\n{7}\n===========================",
+	"sa_admin_penalty_info": "{grey}Штрафы игрока для {lightred}{0}{grey}, баны: {lightred}{1}{grey}, заглушки: {lightred}{2}{grey}, отключения звука: {lightred}{3}{grey}, периоды тишины: {lightred}{4}{grey}, предупреждения: {lightred}{5}",
 	"sa_player_ban_message_time": "Вы были забанены по причине {lightred}{0}{default} на {lightred}{1}{default} минут(ы) администратором {lightred}{2}{default}!",
 	"sa_player_ban_message_perm": "Вас забанили навсегда по причине {lightred}{0}{default} администратором {lightred}{1}{default}!",
 	"sa_player_kick_message": "Вы были выгнаны {lightred}{0}{default} администратором {lightred}{1}{default}!",

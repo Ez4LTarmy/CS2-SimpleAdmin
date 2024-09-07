@@ -60,6 +60,18 @@
 	"sa_discord_penalty_warn": "Uyarı kaydedildi",
 	"sa_discord_penalty_unknown": "Bilinmeyen kaydedildi",
 
+	"sa_player_penalty_info_active_mute": "➔ Sustur [{lightred}❌{default}] - Bitiş [{lightred}{0}{default}]",
+	"sa_player_penalty_info_active_gag": "➔ Konuşma Yasağı [{lightred}❌{default}] - Bitiş [{lightred}{0}{default}]",
+	"sa_player_penalty_info_active_silence": "➔ Sessizlik [{lightred}❌{default}] - Bitiş [{lightred}{0}{default}]",
+	"sa_player_penalty_info_active_warn": "➔ Uyarı [{lightred}❌{default}] - Bitiş [{lightred}{0}{default}] - Sebep [{lightred}{1}{default}]",
+
+	"sa_player_penalty_info_no_active_mute": "➔ Sustur [{lime}✔{default}]",
+	"sa_player_penalty_info_no_active_gag": "➔ Konuşma Yasağı [{lime}✔{default}]",
+	"sa_player_penalty_info_no_active_silence": "➔ Sessizlik [{lime}✔{default}]",
+	"sa_player_penalty_info_no_active_warn": "➔ Uyarı [{lime}✔{default}]",
+
+	"sa_player_penalty_info": "===========================\nOyuncu cezaları {lightred}{0}{default},\nBan sayısı: {lightred}{1}{default}, Konuşma yasağı sayısı: {lightred}{2}{default}, Susturma sayısı: {lightred}{3}{default}, Sessizlik sayısı: {lightred}{4}{default}, Uyarı sayısı: {lightred}{5}{default}\nAktif cezalar:\n{6}\nAktif uyarılar:\n{7}\n===========================",
+	"sa_admin_penalty_info": "{grey}{lightred}{0}{grey} için oyuncu cezaları, banlar: {lightred}{1}{grey}, konuşma yasakları: {lightred}{2}{grey}, susturmalar: {lightred}{3}{grey}, sessizlik: {lightred}{4}{grey}, uyarılar: {lightred}{5}",
 	"sa_player_ban_message_time": "Senaryo nedeniyle {lightred}{0}{default} dakika boyunca {lightred}{1}{default} tarafından yasaklandınız!",
 	"sa_player_ban_message_perm": "Senaryo nedeniyle kalıcı olarak {lightred}{0}{default} tarafından yasaklandınız!",
 	"sa_player_kick_message": "Senaryo nedeniyle {lightred}{0}{default} tarafından atıldınız!",

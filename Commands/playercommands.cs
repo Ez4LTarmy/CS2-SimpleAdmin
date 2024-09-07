@@ -43,10 +43,23 @@ namespace CS2_SimpleAdmin
 			foreach (var controller in Helper.GetValidPlayers().Where(controller => controller is { IsValid: true, IsBot: false }))
 			{
 				if (_localizer != null)
-					controller.SendLocalizedMessage(_localizer,
-										"sa_admin_slay_message",
-										callerName,
-										player?.PlayerName ?? string.Empty);
+				{
+					switch (Instance.Config.OtherSettings.ShowActivityType)
+					{
+						case 1:
+							controller.SendLocalizedMessage(_localizer,
+								"sa_admin_slay_message",
+								"",
+								player?.PlayerName ?? string.Empty);
+							break;
+						case 2:
+							controller.SendLocalizedMessage(_localizer,
+								"sa_admin_slay_message",
+								callerName,
+								player?.PlayerName ?? string.Empty);
+							break;
+					}
+				}
 			}
 		}
 
@@ -125,11 +138,25 @@ namespace CS2_SimpleAdmin
 			foreach (var controller in Helper.GetValidPlayers().Where(controller => controller is { IsValid: true, IsBot: false }))
 			{
 				if (_localizer != null)
-					controller.SendLocalizedMessage(_localizer,
-										"sa_admin_give_message",
-										callerName,
-										player?.PlayerName ?? string.Empty,
-										weaponName);
+				{
+					switch (Instance.Config.OtherSettings.ShowActivityType)
+					{
+						case 1:
+							controller.SendLocalizedMessage(_localizer,
+								"sa_admin_give_message",
+								"",
+								player?.PlayerName ?? string.Empty,
+								weaponName);
+							break;
+						case 2:
+							controller.SendLocalizedMessage(_localizer,
+								"sa_admin_give_message",
+								callerName,
+								player?.PlayerName ?? string.Empty,
+								weaponName);
+							break;
+					}
+				}
 			}
 		}
 
@@ -170,10 +197,23 @@ namespace CS2_SimpleAdmin
 			foreach (var controller in Helper.GetValidPlayers().Where(controller => controller is { IsValid: true, IsBot: false }))
 			{
 				if (_localizer != null)
-					controller.SendLocalizedMessage(_localizer,
-										"sa_admin_strip_message",
-										callerName,
-										player?.PlayerName ?? string.Empty);
+				{
+					switch (Instance.Config.OtherSettings.ShowActivityType)
+					{
+						case 1:
+							controller.SendLocalizedMessage(_localizer,
+								"sa_admin_strip_message",
+								"",
+								player?.PlayerName ?? string.Empty);
+							break;
+						case 2:
+							controller.SendLocalizedMessage(_localizer,
+								"sa_admin_strip_message",
+								callerName,
+								player?.PlayerName ?? string.Empty);
+							break;
+					}
+				}
 			}
 		}
 
@@ -215,10 +255,23 @@ namespace CS2_SimpleAdmin
 			foreach (var controller in Helper.GetValidPlayers().Where(controller => controller is { IsValid: true, IsBot: false }))
 			{
 				if (_localizer != null)
-					controller.SendLocalizedMessage(_localizer,
-										"sa_admin_hp_message",
-										callerName,
-										player?.PlayerName ?? string.Empty);
+				{
+					switch (Instance.Config.OtherSettings.ShowActivityType)
+					{
+						case 1:
+							controller.SendLocalizedMessage(_localizer,
+								"sa_admin_hp_message",
+								"",
+								player?.PlayerName ?? string.Empty);
+							break;
+						case 2:
+							controller.SendLocalizedMessage(_localizer,
+								"sa_admin_hp_message",
+								callerName,
+								player?.PlayerName ?? string.Empty);
+							break;
+					}
+				}
 			}
 		}
 
@@ -261,10 +314,23 @@ namespace CS2_SimpleAdmin
 			foreach (var controller in Helper.GetValidPlayers().Where(controller => controller is { IsValid: true, IsBot: false }))
 			{
 				if (_localizer != null)
-					controller.SendLocalizedMessage(_localizer,
-										"sa_admin_speed_message",
-										callerName,
-										player?.PlayerName ?? string.Empty);
+				{
+					switch (Instance.Config.OtherSettings.ShowActivityType)
+					{
+						case 1:
+							controller.SendLocalizedMessage(_localizer,
+								"sa_admin_speed_message",
+								"",
+								player?.PlayerName ?? string.Empty);
+							break;
+						case 2:
+							controller.SendLocalizedMessage(_localizer,
+								"sa_admin_speed_message",
+								callerName,
+								player?.PlayerName ?? string.Empty);
+							break;
+					}
+				}
 			}
 		}
 
@@ -307,10 +373,23 @@ namespace CS2_SimpleAdmin
 			foreach (var controller in Helper.GetValidPlayers().Where(controller => controller is { IsValid: true, IsBot: false }))
 			{
 				if (_localizer != null)
-					controller.SendLocalizedMessage(_localizer,
-										"sa_admin_gravity_message",
-										callerName,
-										player?.PlayerName ?? string.Empty);
+				{
+					switch (Instance.Config.OtherSettings.ShowActivityType)
+					{
+						case 1:
+							controller.SendLocalizedMessage(_localizer,
+								"sa_admin_gravity_message",
+								"",
+								player?.PlayerName ?? string.Empty);
+							break;
+						case 2:
+							controller.SendLocalizedMessage(_localizer,
+								"sa_admin_gravity_message",
+								callerName,
+								player?.PlayerName ?? string.Empty);
+							break;
+					}
+				}
 			}
 		}
 
@@ -353,10 +432,23 @@ namespace CS2_SimpleAdmin
 			foreach (var controller in Helper.GetValidPlayers().Where(controller => controller is { IsValid: true, IsBot: false }))
 			{
 				if (_localizer != null)
-					controller.SendLocalizedMessage(_localizer,
-										"sa_admin_money_message",
-										callerName,
-										player?.PlayerName ?? string.Empty);
+				{
+					switch (Instance.Config.OtherSettings.ShowActivityType)
+					{
+						case 1:
+							controller.SendLocalizedMessage(_localizer,
+								"sa_admin_money_message",
+								"",
+								player?.PlayerName ?? string.Empty);
+							break;
+						case 2:
+							controller.SendLocalizedMessage(_localizer,
+								"sa_admin_money_message",
+								callerName,
+								player?.PlayerName ?? string.Empty);
+							break;
+					}
+				}
 			}
 		}
 
@@ -402,10 +494,23 @@ namespace CS2_SimpleAdmin
 			foreach (var controller in Helper.GetValidPlayers().Where(controller => controller is { IsValid: true, IsBot: false }))
 			{
 				if (_localizer != null)
-					controller.SendLocalizedMessage(_localizer,
-										"sa_admin_god_message",
-										callerName,
-										player?.PlayerName ?? string.Empty);
+				{
+					switch (Instance.Config.OtherSettings.ShowActivityType)
+					{
+						case 1:
+							controller.SendLocalizedMessage(_localizer,
+								"sa_admin_god_message",
+								"",
+								player?.PlayerName ?? string.Empty);
+							break;
+						case 2:
+							controller.SendLocalizedMessage(_localizer,
+								"sa_admin_god_message",
+								callerName,
+								player?.PlayerName ?? string.Empty);
+							break;
+					}
+				}
 			}
 		}
 
@@ -455,10 +560,23 @@ namespace CS2_SimpleAdmin
 			foreach (var controller in Helper.GetValidPlayers().Where(controller => controller is { IsValid: true, IsBot: false }))
 			{
 				if (_localizer != null)
-					controller.SendLocalizedMessage(_localizer,
-										"sa_admin_slap_message",
-										callerName,
-										player?.PlayerName ?? string.Empty);
+				{
+					switch (Instance.Config.OtherSettings.ShowActivityType)
+					{
+						case 1:
+							controller.SendLocalizedMessage(_localizer,
+								"sa_admin_slap_message",
+								"",
+								player?.PlayerName ?? string.Empty);
+							break;
+						case 2:
+							controller.SendLocalizedMessage(_localizer,
+								"sa_admin_slap_message",
+								callerName,
+								player?.PlayerName ?? string.Empty);
+							break;
+					}
+				}
 			}
 		}
 
@@ -521,7 +639,7 @@ namespace CS2_SimpleAdmin
 
 			if (!teamName.Equals("swap"))
 			{
-				if (player.PawnIsAlive && teamNum != CsTeam.Spectator && !kill && Config.TeamSwitchType == 1)
+				if (player.PawnIsAlive && teamNum != CsTeam.Spectator && !kill && Config.OtherSettings.TeamSwitchType == 1)
 					player.SwitchTeam(teamNum);
 				else
 					player?.ChangeTeam(teamNum);
@@ -532,7 +650,7 @@ namespace CS2_SimpleAdmin
 				{
 					var _teamNum = (CsTeam)player.TeamNum == CsTeam.Terrorist ? CsTeam.CounterTerrorist : CsTeam.Terrorist;
 					teamName = _teamNum == CsTeam.Terrorist ? "TT" : "CT";
-					if (player.PawnIsAlive && !kill && Config.TeamSwitchType == 1)
+					if (player.PawnIsAlive && !kill && Config.OtherSettings.TeamSwitchType == 1)
 					{
 						player.SwitchTeam(_teamNum);
 					}
@@ -548,11 +666,25 @@ namespace CS2_SimpleAdmin
 				foreach (var controller in Helper.GetValidPlayers().Where(controller => controller is { IsValid: true, IsBot: false }))
 				{
 					if (_localizer != null)
-						controller.SendLocalizedMessage(_localizer,
-											"sa_admin_team_message",
-											callerName,
-											player?.PlayerName ?? string.Empty,
-											teamName);
+					{
+						switch (Instance.Config.OtherSettings.ShowActivityType)
+						{
+							case 1:
+								controller.SendLocalizedMessage(_localizer,
+									"sa_admin_team_message",
+									"",
+									player?.PlayerName ?? string.Empty,
+									teamName);
+								break;
+							case 2:
+								controller.SendLocalizedMessage(_localizer,
+									"sa_admin_team_message",
+									callerName,
+									player?.PlayerName ?? string.Empty,
+									teamName);
+								break;
+						}
+					}
 				}
 			}
 
@@ -587,11 +719,25 @@ namespace CS2_SimpleAdmin
 					foreach (var controller in Helper.GetValidPlayers().Where(controller => controller is { IsValid: true, IsBot: false }))
 					{
 						if (_localizer != null)
-							controller.SendLocalizedMessage(_localizer,
-												"sa_admin_rename_message",
-												callerName,
-												player?.PlayerName ?? string.Empty,
-												newName);
+						{
+							switch (Instance.Config.OtherSettings.ShowActivityType)
+							{
+								case 1:
+									controller.SendLocalizedMessage(_localizer,
+										"sa_admin_rename_message",
+										"",
+										player?.PlayerName ?? string.Empty,
+										newName);
+									break;
+								case 2:
+									controller.SendLocalizedMessage(_localizer,
+										"sa_admin_rename_message",
+										callerName,
+										player?.PlayerName ?? string.Empty,
+										newName);
+									break;
+							}
+						}
 					}
 				}
 
@@ -624,11 +770,25 @@ namespace CS2_SimpleAdmin
 					foreach (var controller in Helper.GetValidPlayers().Where(controller => controller is { IsValid: true, IsBot: false }))
 					{
 						if (_localizer != null)
-							controller.SendLocalizedMessage(_localizer,
-												"sa_admin_rename_message",
-												callerName,
-												player.PlayerName ?? string.Empty,
-												newName);
+						{
+							switch (Instance.Config.OtherSettings.ShowActivityType)
+							{
+								case 1:
+									controller.SendLocalizedMessage(_localizer,
+										"sa_admin_rename_message",
+										"",
+										player.PlayerName ?? string.Empty,
+										newName);
+									break;
+								case 2:
+									controller.SendLocalizedMessage(_localizer,
+										"sa_admin_rename_message",
+										callerName,
+										player.PlayerName ?? string.Empty,
+										newName);
+									break;
+							}
+						}
 					}
 				}
 
@@ -687,10 +847,23 @@ namespace CS2_SimpleAdmin
 			foreach (var controller in Helper.GetValidPlayers().Where(controller => controller is { IsValid: true, IsBot: false }))
 			{
 				if (_localizer != null)
-					controller.SendLocalizedMessage(_localizer,
-										"sa_admin_respawn_message",
-										callerName,
-										player?.PlayerName ?? string.Empty);
+				{
+					switch (Instance.Config.OtherSettings.ShowActivityType)
+					{
+						case 1:
+							controller.SendLocalizedMessage(_localizer,
+								"sa_admin_respawn_message",
+								"",
+								player?.PlayerName ?? string.Empty);
+							break;
+						case 2:
+							controller.SendLocalizedMessage(_localizer,
+								"sa_admin_respawn_message",
+								callerName,
+								player?.PlayerName ?? string.Empty);
+							break;
+					}
+				}
 			}
 		}
 
@@ -730,10 +903,23 @@ namespace CS2_SimpleAdmin
 				foreach (var controller in Helper.GetValidPlayers().Where(controller => controller is { IsValid: true, IsBot: false }))
 				{
 					if (_localizer != null)
-						controller.SendLocalizedMessage(_localizer,
-											"sa_admin_tp_message",
-											caller.PlayerName,
-											player.PlayerName ?? string.Empty);
+					{
+						switch (Instance.Config.OtherSettings.ShowActivityType)
+						{
+							case 1:
+								controller.SendLocalizedMessage(_localizer,
+									"sa_admin_tp_message",
+									"",
+									player.PlayerName ?? string.Empty);
+								break;
+							case 2:
+								controller.SendLocalizedMessage(_localizer,
+									"sa_admin_tp_message",
+									caller.PlayerName,
+									player.PlayerName ?? string.Empty);
+								break;
+						}
+					}
 				}
 			});
 		}
@@ -773,10 +959,23 @@ namespace CS2_SimpleAdmin
 				foreach (var controller in Helper.GetValidPlayers().Where(controller => controller is { IsValid: true, IsBot: false }))
 				{
 					if (_localizer != null)
-						controller.SendLocalizedMessage(_localizer,
-											"sa_admin_bring_message",
-											caller.PlayerName,
-											player.PlayerName ?? string.Empty);
+					{
+						switch (Instance.Config.OtherSettings.ShowActivityType)
+						{
+							case 1:
+								controller.SendLocalizedMessage(_localizer,
+									"sa_admin_bring_message",
+									"",
+									player.PlayerName ?? string.Empty);
+								break;
+							case 2:
+								controller.SendLocalizedMessage(_localizer,
+									"sa_admin_bring_message",
+									caller.PlayerName,
+									player.PlayerName ?? string.Empty);
+								break;
+						}
+					}
 				}
 			});
 		}
