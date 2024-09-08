@@ -43,7 +43,7 @@ public partial class CS2_SimpleAdmin
 		// Determine message keys and arguments for the no-clip notification
 		var (activityMessageKey, adminActivityArgs) =
 			("sa_admin_noclip_message",
-				new object[] { callerName, player.PlayerName });
+				new object[] { "CALLER", player.PlayerName });
 
 		// Display admin activity message to other players
 		if (caller == null || !SilentPlayers.Contains(caller.Slot))
@@ -97,7 +97,7 @@ public partial class CS2_SimpleAdmin
 		// Determine message keys and arguments for the freeze notification
 		var (activityMessageKey, adminActivityArgs) = 
 			("sa_admin_freeze_message", 
-				new object[] { callerName, player.PlayerName });
+				new object[] { "CALLER", player.PlayerName });
 
 		// Display admin activity message to other players
 		if (caller == null || !SilentPlayers.Contains(caller.Slot))
@@ -131,11 +131,11 @@ public partial class CS2_SimpleAdmin
 
 		playersToTarget.ForEach(player =>
 		{
-			Unfreeze(caller, player, callerName, command);
+            Unfreeze(caller, player, callerName, command);
 		});
 	}
 
-	public void Unfreeze(CCSPlayerController? caller, CCSPlayerController player, string? callerName = null, CommandInfo? command = null)
+	internal static void Unfreeze(CCSPlayerController? caller, CCSPlayerController player, string? callerName = null, CommandInfo? command = null)
 	{
 		if (!player.IsValid) return;
 		if (!caller.CanTarget(player)) return;
@@ -149,7 +149,7 @@ public partial class CS2_SimpleAdmin
 		// Determine message keys and arguments for the unfreeze notification
 		var (activityMessageKey, adminActivityArgs) = 
 			("sa_admin_unfreeze_message", 
-				new object[] { callerName, player.PlayerName });
+				new object[] { "CALLER", player.PlayerName });
 
 		// Display admin activity message to other players
 		if (caller == null || !SilentPlayers.Contains(caller.Slot))

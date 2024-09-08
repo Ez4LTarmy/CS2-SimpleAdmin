@@ -47,7 +47,7 @@ public partial class CS2_SimpleAdmin
 
 	internal static void Gag(CCSPlayerController? caller, CCSPlayerController player, int time, string reason, string? callerName = null, MuteManager? muteManager = null, CommandInfo? command = null, bool silent = false)
 	{
-		if (Database == null || player == null || !player.IsValid || !player.UserId.HasValue) return;
+		if (Database == null || !player.IsValid || !player.UserId.HasValue) return;
 		if (!caller.CanTarget(player)) return;
 
 		// Set default caller name if not provided
@@ -76,11 +76,11 @@ public partial class CS2_SimpleAdmin
 		// Determine message keys and arguments based on gag time (permanent or timed)
 		var (messageKey, activityMessageKey, playerArgs, adminActivityArgs) = time == 0
 			? ("sa_player_gag_message_perm", "sa_admin_gag_message_perm",
-				[reason, callerName],
-				[callerName, player.PlayerName, reason])
+				[reason, "CALLER"],
+				["CALLER", player.PlayerName, reason])
 			: ("sa_player_gag_message_time", "sa_admin_gag_message_time", 
-				new object[] { reason, time, callerName },
-				new object[] { callerName, player.PlayerName, reason, time });
+				new object[] { reason, time, "CALLER" },
+				new object[] { "CALLER", player.PlayerName, reason, time });
 
 		// Display center message to the gagged player
 		Helper.DisplayCenterMessage(player, messageKey, callerName, playerArgs);
@@ -276,7 +276,7 @@ public partial class CS2_SimpleAdmin
 
 	internal static void Mute(CCSPlayerController? caller, CCSPlayerController player, int time, string reason, string? callerName = null, MuteManager? muteManager = null, CommandInfo? command = null, bool silent = false)
 	{
-		if (Database == null || player == null || !player.IsValid || !player.UserId.HasValue) return;
+		if (Database == null || !player.IsValid || !player.UserId.HasValue) return;
 		if (!caller.CanTarget(player)) return;
 
 		// Set default caller name if not provided
@@ -302,11 +302,11 @@ public partial class CS2_SimpleAdmin
 		// Determine message keys and arguments based on mute time (permanent or timed)
 		var (messageKey, activityMessageKey, playerArgs, adminActivityArgs) = time == 0
 			? ("sa_player_mute_message_perm", "sa_admin_mute_message_perm",
-				[reason, callerName],
-				[callerName, player.PlayerName, reason])
+				[reason, "CALLER"],
+				["CALLER", player.PlayerName, reason])
 			: ("sa_player_mute_message_time", "sa_admin_mute_message_time",
-				new object[] { reason, time, callerName },
-				new object[] { callerName, player.PlayerName, reason, time });
+				new object[] { reason, time, "CALLER" },
+				new object[] { "CALLER", player.PlayerName, reason, time });
 
 		// Display center message to the muted player
 		Helper.DisplayCenterMessage(player, messageKey, callerName, playerArgs);
@@ -498,7 +498,7 @@ public partial class CS2_SimpleAdmin
 		
 	internal static void Silence(CCSPlayerController? caller, CCSPlayerController player, int time, string reason, string? callerName = null, MuteManager? muteManager = null, CommandInfo? command = null, bool silent = false)
 	{
-		if (Database == null || player == null || !player.IsValid || !player.UserId.HasValue) return;
+		if (Database == null || !player.IsValid || !player.UserId.HasValue) return;
 		if (!caller.CanTarget(player)) return;
 
 		// Set default caller name if not provided
@@ -527,11 +527,11 @@ public partial class CS2_SimpleAdmin
 		// Determine message keys and arguments based on silence time (permanent or timed)
 		var (messageKey, activityMessageKey, playerArgs, adminActivityArgs) = time == 0
 			? ("sa_player_silence_message_perm", "sa_admin_silence_message_perm",
-				[reason, callerName],
-				[callerName, player.PlayerName, reason])
+				[reason, "CALLER"],
+				["CALLER", player.PlayerName, reason])
 			: ("sa_player_silence_message_time", "sa_admin_silence_message_time",
-				new object[] { reason, time, callerName },
-				new object[] { callerName, player.PlayerName, reason, time });
+				new object[] { reason, time, "CALLER" },
+				new object[] { "CALLER", player.PlayerName, reason, time });
 
 		// Display center message to the silenced player
 		Helper.DisplayCenterMessage(player, messageKey, callerName, playerArgs);

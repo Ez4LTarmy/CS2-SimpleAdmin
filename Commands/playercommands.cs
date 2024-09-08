@@ -1,4 +1,3 @@
-using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Core.Attributes.Registration;
 using CounterStrikeSharp.API.Modules.Admin;
@@ -6,7 +5,6 @@ using CounterStrikeSharp.API.Modules.Commands;
 using CounterStrikeSharp.API.Modules.Entities.Constants;
 using CounterStrikeSharp.API.Modules.Memory;
 using CounterStrikeSharp.API.Modules.Utils;
-using CS2_SimpleAdmin.Models;
 
 namespace CS2_SimpleAdmin;
 
@@ -43,7 +41,7 @@ public partial class CS2_SimpleAdmin
 		// Determine message keys and arguments for the slay notification
 		var (activityMessageKey, adminActivityArgs) = 
 			("sa_admin_slay_message", 
-				new object[] { callerName, player.PlayerName });
+				new object[] { "CALLER", player.PlayerName });
 
 		// Display admin activity message to other players
 		if (caller == null || !SilentPlayers.Contains(caller.Slot))
@@ -103,7 +101,7 @@ public partial class CS2_SimpleAdmin
 		});
 	}
 
-	internal static void GiveWeapon(CCSPlayerController? caller, CCSPlayerController player, string weaponName, string? callerName = null, CommandInfo? command = null)
+	private static void GiveWeapon(CCSPlayerController? caller, CCSPlayerController player, string weaponName, string? callerName = null, CommandInfo? command = null)
 	{
 		if (!caller.CanTarget(player)) return;
 
@@ -122,7 +120,7 @@ public partial class CS2_SimpleAdmin
 		// Determine message keys and arguments for the weapon give notification
 		var (activityMessageKey, adminActivityArgs) = 
 			("sa_admin_give_message", 
-				new object[] { callerName, player.PlayerName, weaponName });
+				new object[] { "CALLER", player.PlayerName, weaponName });
 
 		// Display admin activity message to other players
 		if (caller == null || !SilentPlayers.Contains(caller.Slot))
@@ -150,7 +148,7 @@ public partial class CS2_SimpleAdmin
 		// Determine message keys and arguments for the weapon give notification
 		var (activityMessageKey, adminActivityArgs) = 
 			("sa_admin_give_message", 
-				new object[] { callerName, player.PlayerName, weapon.ToString() });
+				new object[] { "CALLER", player.PlayerName, weapon.ToString() });
 
 		// Display admin activity message to other players
 		if (caller == null || !SilentPlayers.Contains(caller.Slot))
@@ -202,7 +200,7 @@ public partial class CS2_SimpleAdmin
 		// Determine message keys and arguments for the weapon strip notification
 		var (activityMessageKey, adminActivityArgs) = 
 			("sa_admin_strip_message", 
-				new object[] { callerName, player.PlayerName });
+				new object[] { "CALLER", player.PlayerName });
 
 		// Display admin activity message to other players
 		if (caller == null || !SilentPlayers.Contains(caller.Slot))
@@ -252,7 +250,7 @@ public partial class CS2_SimpleAdmin
 		// Determine message keys and arguments for the HP set notification
 		var (activityMessageKey, adminActivityArgs) = 
 			("sa_admin_hp_message", 
-				new object[] { callerName, player.PlayerName });
+				new object[] { "CALLER", player.PlayerName });
 
 		// Display admin activity message to other players
 		if (caller == null || !SilentPlayers.Contains(caller.Slot))
@@ -305,7 +303,7 @@ public partial class CS2_SimpleAdmin
 		// Determine message keys and arguments for the speed set notification
 		var (activityMessageKey, adminActivityArgs) = 
 			("sa_admin_speed_message", 
-				new object[] { callerName, player.PlayerName });
+				new object[] { "CALLER", player.PlayerName });
 
 		// Display admin activity message to other players
 		if (caller == null || !SilentPlayers.Contains(caller.Slot))
@@ -358,7 +356,7 @@ public partial class CS2_SimpleAdmin
 		// Determine message keys and arguments for the gravity set notification
 		var (activityMessageKey, adminActivityArgs) = 
 			("sa_admin_gravity_message", 
-				new object[] { callerName, player.PlayerName });
+				new object[] { "CALLER", player.PlayerName });
 
 		// Display admin activity message to other players
 		if (caller == null || !SilentPlayers.Contains(caller.Slot))
@@ -411,7 +409,7 @@ public partial class CS2_SimpleAdmin
 		// Determine message keys and arguments for the money set notification
 		var (activityMessageKey, adminActivityArgs) = 
 			("sa_admin_money_message", 
-				new object[] { callerName, player.PlayerName });
+				new object[] { "CALLER", player.PlayerName });
 
 		// Display admin activity message to other players
 		if (caller == null || !SilentPlayers.Contains(caller.Slot))
@@ -465,7 +463,7 @@ public partial class CS2_SimpleAdmin
 		// Determine message key and arguments for the god mode notification
 		var (activityMessageKey, adminActivityArgs) = 
 			("sa_admin_god_message", 
-				new object[] { callerName, player.PlayerName });
+				new object[] { "CALLER", player.PlayerName });
 
 		// Display admin activity message to other players
 		if (caller == null || !SilentPlayers.Contains(caller.Slot))
@@ -522,7 +520,7 @@ public partial class CS2_SimpleAdmin
 		// Determine message key and arguments for the slap notification
 		var (activityMessageKey, adminActivityArgs) = 
 			("sa_admin_slap_message", 
-				new object[] { callerName, player.PlayerName });
+				new object[] { "CALLER", player.PlayerName });
 
 		// Display admin activity message to other players
 		if (caller != null && SilentPlayers.Contains(caller.Slot)) return;
@@ -622,7 +620,7 @@ public partial class CS2_SimpleAdmin
 
 		// Determine message key and arguments for the team change notification
 		var activityMessageKey = "sa_admin_team_message";
-		var adminActivityArgs = new object[] { callerName, player.PlayerName, teamName };
+		var adminActivityArgs = new object[] { "CALLER", player.PlayerName, teamName };
 
 		// Display admin activity message to other players
 		if (caller != null && SilentPlayers.Contains(caller.Slot)) return;
@@ -667,7 +665,7 @@ public partial class CS2_SimpleAdmin
 
 			// Determine message key and arguments for the rename notification
 			var activityMessageKey = "sa_admin_rename_message";
-			var adminActivityArgs = new object[] { callerName, player.PlayerName, newName };
+			var adminActivityArgs = new object[] { "CALLER", player.PlayerName, newName };
 
 			// Display admin activity message to other players
 			if (caller != null && SilentPlayers.Contains(caller.Slot)) return;
@@ -717,7 +715,7 @@ public partial class CS2_SimpleAdmin
 
 			// Determine message key and arguments for the rename notification
 			var activityMessageKey = "sa_admin_rename_message";
-			var adminActivityArgs = new object[] { callerName, player.PlayerName, newName };
+			var adminActivityArgs = new object[] { "CALLER", player.PlayerName, newName };
 
 			// Display admin activity message to other players
 			if (caller != null && SilentPlayers.Contains(caller.Slot)) return;
@@ -758,7 +756,7 @@ public partial class CS2_SimpleAdmin
 		callerName ??= caller == null ? "Console" : caller.PlayerName;
 		
 		// Ensure the player's pawn is valid before attempting to respawn
-		if (_cBasePlayerControllerSetPawnFunc == null || player?.PlayerPawn.Value == null || !player.PlayerPawn.IsValid) return;
+		if (_cBasePlayerControllerSetPawnFunc == null || player.PlayerPawn.Value == null || !player.PlayerPawn.IsValid) return;
 
 		// Perform the respawn operation
 		var playerPawn = player.PlayerPawn.Value;
@@ -776,7 +774,7 @@ public partial class CS2_SimpleAdmin
 
 		// Determine message key and arguments for the respawn notification
 		var activityMessageKey = "sa_admin_respawn_message";
-		var adminActivityArgs = new object[] { callerName, player.PlayerName };
+		var adminActivityArgs = new object[] { "CALLER", player.PlayerName };
 
 		// Display admin activity message to other players
 		if (caller != null && SilentPlayers.Contains(caller.Slot)) return;

@@ -8,4 +8,22 @@ public class AdminSettings(
 {
     public bool ShowPenaltiesOnJoin { get; set; } = showPenaltiesOnJoin;
     public MenuType MenuType { get; set; } = menuType;
+    // private Dictionary<string, object?> SettingsList { get; } = new();
+
+    /*public void SetSetting<T>(string key, T? value)
+    {
+        SettingsList[key] = value;
+    }
+
+    public T? GetSetting<T>(string key, T? defaultValue = default)
+    {
+        if (!SettingsList.TryGetValue(key, out var value)) return defaultValue;
+        
+        if (value is T typedValue)
+        {
+            return typedValue;
+        }
+        
+        throw new InvalidOperationException($"Key '{key}' is not of type {typeof(T)}.");
+    }*/
 }

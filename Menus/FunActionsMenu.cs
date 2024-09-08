@@ -149,7 +149,7 @@ public static class FunActionsMenu
 		if (player.PlayerPawn.Value.MoveType != MoveType_t.MOVETYPE_OBSOLETE)
 			CS2_SimpleAdmin.Freeze(admin, player, -1);
 		else
-			CS2_SimpleAdmin.Instance.Unfreeze(admin, player);
+            CS2_SimpleAdmin.Unfreeze(admin, player);
 	}
 
 	private static void SetHpMenu(CCSPlayerController admin, CCSPlayerController player)

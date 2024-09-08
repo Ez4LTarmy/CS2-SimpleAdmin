@@ -51,7 +51,7 @@ public partial class CS2_SimpleAdmin
 
 	internal void Ban(CCSPlayerController? caller, CCSPlayerController player, int time, string reason, string? callerName = null, BanManager? banManager = null, CommandInfo? command = null, bool silent = false)
 	{
-	    if (Database == null || player == null || !player.IsValid || !player.UserId.HasValue) return;
+	    if (Database == null || !player.IsValid || !player.UserId.HasValue) return;
 	    if (!caller.CanTarget(player)) return;
 	    if (!CheckValidBan(caller, time)) return;
 
@@ -83,11 +83,11 @@ public partial class CS2_SimpleAdmin
 	    // Determine message keys and arguments based on ban time
 	    var (messageKey, activityMessageKey, centerArgs, adminActivityArgs) = time == 0
 		    ? ("sa_player_ban_message_perm", "sa_admin_ban_message_perm",
-			    [callerName, reason, "CALLER"],
-			    [callerName, "CALLER", player.PlayerName, reason])
+			    [reason, "CALLER"],
+			    ["CALLER", player.PlayerName, reason])
 		    : ("sa_player_ban_message_time", "sa_admin_ban_message_time", 
-			    new object[] { callerName, reason, time, "CALLER" },
-			    new object[] { callerName, "CALLER", player.PlayerName, reason, time });
+			    new object[] { reason, time, "CALLER" },
+			    new object[] { "CALLER", player.PlayerName, reason, time });
 
 	    // Display center message to the player
 	    Helper.DisplayCenterMessage(player, messageKey, callerName, centerArgs);
@@ -318,7 +318,7 @@ public partial class CS2_SimpleAdmin
 
 internal void Warn(CCSPlayerController? caller, CCSPlayerController player, int time, string reason, string? callerName = null, WarnManager? warnManager = null, CommandInfo? command = null)
 {
-    if (Database == null || player == null || !player.IsValid || !player.UserId.HasValue) return;
+    if (Database == null || !player.IsValid || !player.UserId.HasValue) return;
     if (!caller.CanTarget(player)) return;
     if (!CheckValidBan(caller, time)) return;
 
@@ -366,11 +366,11 @@ internal void Warn(CCSPlayerController? caller, CCSPlayerController player, int 
     // Determine message keys and arguments based on warning time
     var (messageKey, activityMessageKey, centerArgs, adminActivityArgs) = time == 0
         ? ("sa_player_warn_message_perm", "sa_admin_warn_message_perm",
-            new object[] { reason, callerName },
-            new object[] { callerName, player.PlayerName, reason })
+            new object[] { reason, "CALLER" },
+            new object[] { "CALLER", player.PlayerName, reason })
         : ("sa_player_warn_message_time", "sa_admin_warn_message_time",
-	        [reason, time, callerName],
-	        [callerName, player.PlayerName, reason, time]);
+	        [reason, time, "CALLER"],
+	        ["CALLER", player.PlayerName, reason, time]);
 
     // Display center message to the playser
     Helper.DisplayCenterMessage(player, messageKey, callerName, centerArgs);

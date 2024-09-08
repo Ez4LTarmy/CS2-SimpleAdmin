@@ -637,7 +637,7 @@ namespace CS2_SimpleAdmin
 
 		public void Kick(CCSPlayerController? caller, CCSPlayerController player, string? reason = "Unknown", string? callerName = null, CommandInfo? command = null)
 		{
-			if (player == null || !player.IsValid) return;
+			if (!player.IsValid) return;
 			if (!caller.CanTarget(player)) return;
 
 			// Set default caller name if not provided
@@ -653,8 +653,8 @@ namespace CS2_SimpleAdmin
 			// Determine message keys and arguments for the kick notification
 			var (messageKey, activityMessageKey, centerArgs, adminActivityArgs) = 
 				("sa_player_kick_message", "sa_admin_kick_message",
-					new object[] { reason, callerName },
-					new object[] { callerName, player.PlayerName, reason });
+					new object[] { reason, "CALLER" },
+					new object[] { "CALLER", player.PlayerName, reason });
 
 			// Display center message to the kicked player
 			Helper.DisplayCenterMessage(player, messageKey, callerName, centerArgs);
@@ -732,7 +732,7 @@ namespace CS2_SimpleAdmin
 
 			var (activityMessageKey, adminActivityArgs) = 
 				("sa_admin_changemap_message",
-					new object[] { callerName, map });
+					new object[] { "CALLER", map });
 
 			// Display admin activity message to other players
 			if (caller == null || !SilentPlayers.Contains(caller.Slot))
@@ -770,7 +770,7 @@ namespace CS2_SimpleAdmin
 			// Display admin activity message to other players
 			if (caller == null || !SilentPlayers.Contains(caller.Slot))
 			{
-				Helper.ShowAdminActivity(activityMessageKey, callerName, [callerName, map]);
+				Helper.ShowAdminActivity(activityMessageKey, callerName, ["CALLER", map]);
 			}
 
 			// Add timer to execute the map change command after a delay
