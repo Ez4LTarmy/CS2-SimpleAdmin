@@ -1,3 +1,4 @@
+using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Core.Attributes.Registration;
 using CounterStrikeSharp.API.Modules.Admin;
@@ -5,979 +6,872 @@ using CounterStrikeSharp.API.Modules.Commands;
 using CounterStrikeSharp.API.Modules.Entities.Constants;
 using CounterStrikeSharp.API.Modules.Memory;
 using CounterStrikeSharp.API.Modules.Utils;
+using CS2_SimpleAdmin.Models;
 
-namespace CS2_SimpleAdmin
+namespace CS2_SimpleAdmin;
+
+public partial class CS2_SimpleAdmin
 {
-	public partial class CS2_SimpleAdmin
+	[ConsoleCommand("css_slay")]
+	[RequiresPermissions("@css/slay")]
+	[CommandHelper(minArgs: 1, usage: "<#userid or name>", whoCanExecute: CommandUsage.CLIENT_AND_SERVER)]
+	public void OnSlayCommand(CCSPlayerController? caller, CommandInfo command)
 	{
-		[ConsoleCommand("css_slay")]
-		[RequiresPermissions("@css/slay")]
-		[CommandHelper(minArgs: 1, usage: "<#userid or name>", whoCanExecute: CommandUsage.CLIENT_AND_SERVER)]
-		public void OnSlayCommand(CCSPlayerController? caller, CommandInfo command)
+		var callerName = caller == null ? "Console" : caller.PlayerName;
+		var targets = GetTarget(command);
+		if (targets == null) return;
+
+		var playersToTarget = targets.Players.Where(player => player.IsValid && player is { PawnIsAlive: true, IsHLTV: false }).ToList();
+
+		playersToTarget.ForEach(player =>
 		{
-			var callerName = caller == null ? "Console" : caller.PlayerName;
-			var targets = GetTarget(command);
-			if (targets == null) return;
+			Slay(caller, player, callerName, command);
+		});
+	}
 
-			var playersToTarget = targets.Players.Where(player => player.IsValid && player is { PawnIsAlive: true, IsHLTV: false }).ToList();
+	internal static void Slay(CCSPlayerController? caller, CCSPlayerController player, string? callerName = null, CommandInfo? command = null)
+	{
+		if (!player.IsValid || player.Connected != PlayerConnectedState.PlayerConnected) return;
+		if (!caller.CanTarget(player)) return;
 
-			playersToTarget.ForEach(player =>
-			{
-				Slay(caller, player, callerName, command);
-			});
+		// Set default caller name if not provided
+		callerName ??= caller != null ? caller.PlayerName : "Console";
+
+		// Make the player commit suicide
+		player.CommitSuicide(false, true);
+
+		// Determine message keys and arguments for the slay notification
+		var (activityMessageKey, adminActivityArgs) = 
+			("sa_admin_slay_message", 
+				new object[] { callerName, player.PlayerName });
+
+		// Display admin activity message to other players
+		if (caller == null || !SilentPlayers.Contains(caller.Slot))
+		{
+			Helper.ShowAdminActivity(activityMessageKey, callerName, adminActivityArgs);
 		}
 
-		public void Slay(CCSPlayerController? caller, CCSPlayerController? player, string? callerName = null, CommandInfo? command = null)
+		// Log the command and send Discord notification
+		if (command == null)
+			Helper.LogCommand(caller, $"css_slay {(string.IsNullOrEmpty(player.PlayerName) ? player.SteamID.ToString() : player.PlayerName)}");
+		else
+			Helper.LogCommand(caller, command);
+	}
+
+	[ConsoleCommand("css_give")]
+	[RequiresPermissions("@css/cheats")]
+	[CommandHelper(minArgs: 2, usage: "<#userid or name> <weapon>", whoCanExecute: CommandUsage.CLIENT_AND_SERVER)]
+	public void OnGiveCommand(CCSPlayerController? caller, CommandInfo command)
+	{
+		var callerName = caller == null ? "Console" : caller.PlayerName;
+		var targets = GetTarget(command);
+		if (targets == null) return;
+
+		var playersToTarget = targets.Players.Where(player => player.IsValid && player is { PawnIsAlive: true, IsHLTV: false }).ToList();
+		var weaponName = command.GetArg(2);
+
+		// check if item is typed
+		if (weaponName.Length < 5)
 		{
-			if (player == null || !player.IsValid || player.Connected != PlayerConnectedState.PlayerConnected)
-				return;
-			if (!caller.CanTarget(player)) return;
-
-			callerName ??= caller == null ? "Console" : caller.PlayerName;
-
-			player?.CommitSuicide(false, true);
-
-			Helper.LogCommand(caller, $"css_slay {player?.PlayerName}");
-
-			if (caller != null && SilentPlayers.Contains(caller.Slot)) return;
-			foreach (var controller in Helper.GetValidPlayers().Where(controller => controller is { IsValid: true, IsBot: false }))
-			{
-				if (_localizer != null)
-				{
-					switch (Instance.Config.OtherSettings.ShowActivityType)
-					{
-						case 1:
-							controller.SendLocalizedMessage(_localizer,
-								"sa_admin_slay_message",
-								"",
-								player?.PlayerName ?? string.Empty);
-							break;
-						case 2:
-							controller.SendLocalizedMessage(_localizer,
-								"sa_admin_slay_message",
-								callerName,
-								player?.PlayerName ?? string.Empty);
-							break;
-					}
-				}
-			}
+			command.ReplyToCommand($"No weapon typed.");
+			return;
 		}
 
-		[ConsoleCommand("css_give")]
-		[RequiresPermissions("@css/cheats")]
-		[CommandHelper(minArgs: 2, usage: "<#userid or name> <weapon>", whoCanExecute: CommandUsage.CLIENT_AND_SERVER)]
-		public void OnGiveCommand(CCSPlayerController? caller, CommandInfo command)
+		// check if item is valid
+		if (!weaponName.Contains("weapon_") && !weaponName.Contains("item_"))
 		{
-			var callerName = caller == null ? "Console" : caller.PlayerName;
-			var targets = GetTarget(command);
-			if (targets == null) return;
+			command.ReplyToCommand($"{weaponName} is not a valid item.");
+			return;
+		}
 
-			var playersToTarget = targets.Players.Where(player => player.IsValid && player is { PawnIsAlive: true, IsHLTV: false }).ToList();
-			var weaponName = command.GetArg(2);
-
-			// check if item is typed
-			if (weaponName.Length < 5)
+		// check if weapon is knife
+		if (weaponName.Contains("_knife") || weaponName.Contains("bayonet"))
+		{
+			if (CoreConfig.FollowCS2ServerGuidelines)
 			{
-				command.ReplyToCommand($"No weapon typed.");
-				return;
-			}
-
-			// check if item is valid
-			if (!weaponName.Contains("weapon_") && !weaponName.Contains("item_"))
-			{
-				command.ReplyToCommand($"{weaponName} is not a valid item.");
+				command.ReplyToCommand($"Cannot Give {weaponName} because it's illegal to be given.");
 				return;
 			}
-
-			// check if weapon is knife
-			if (weaponName.Contains("_knife") || weaponName.Contains("bayonet"))
-			{
-				if (CoreConfig.FollowCS2ServerGuidelines)
-				{
-					command.ReplyToCommand($"Cannot Give {weaponName} because it's illegal to be given.");
-					return;
-				}
-			}
-
-			playersToTarget.ForEach(player =>
-			{
-				if (player.Connected != PlayerConnectedState.PlayerConnected)
-					return;
-
-				GiveWeapon(caller, player, weaponName, callerName, command);
-			});
 		}
 
-		public void GiveWeapon(CCSPlayerController? caller, CCSPlayerController player, CsItem weapon, string? callerName = null)
+		playersToTarget.ForEach(player =>
 		{
-			if (!caller.CanTarget(player)) return;
-
-			Helper.LogCommand(caller, $"css_give {player.PlayerName} {weapon.ToString()}");
-
-			player.GiveNamedItem(weapon);
-			SubGiveWeapon(caller, player, weapon.ToString(), callerName);
-		}
-
-		private void GiveWeapon(CCSPlayerController? caller, CCSPlayerController player, string weaponName, string? callerName = null, CommandInfo? command = null)
-		{
-			if (!caller.CanTarget(player)) return;
-
-			Helper.LogCommand(caller, $"css_give {player.PlayerName} {weaponName}");
-
-			player.GiveNamedItem(weaponName);
-			SubGiveWeapon(caller, player, weaponName, callerName);
-		}
-
-		private void SubGiveWeapon(CCSPlayerController? caller, CCSPlayerController player, string weaponName, string? callerName = null)
-		{
-			if (!caller.CanTarget(player)) return;
-
-			callerName ??= caller == null ? "Console" : caller.PlayerName;
-
-			if (caller != null && (SilentPlayers.Contains(caller.Slot))) return;
-			foreach (var controller in Helper.GetValidPlayers().Where(controller => controller is { IsValid: true, IsBot: false }))
-			{
-				if (_localizer != null)
-				{
-					switch (Instance.Config.OtherSettings.ShowActivityType)
-					{
-						case 1:
-							controller.SendLocalizedMessage(_localizer,
-								"sa_admin_give_message",
-								"",
-								player?.PlayerName ?? string.Empty,
-								weaponName);
-							break;
-						case 2:
-							controller.SendLocalizedMessage(_localizer,
-								"sa_admin_give_message",
-								callerName,
-								player?.PlayerName ?? string.Empty,
-								weaponName);
-							break;
-					}
-				}
-			}
-		}
-
-		[ConsoleCommand("css_strip")]
-		[RequiresPermissions("@css/slay")]
-		[CommandHelper(minArgs: 1, usage: "<#userid or name>", whoCanExecute: CommandUsage.CLIENT_AND_SERVER)]
-		public void OnStripCommand(CCSPlayerController? caller, CommandInfo command)
-		{
-			var callerName = caller == null ? "Console" : caller.PlayerName;
-			var targets = GetTarget(command);
-			if (targets == null) return;
-
-			var playersToTarget = targets.Players.Where(player => player.IsValid && player is { PawnIsAlive: true, IsHLTV: false }).ToList();
-
-			playersToTarget.ForEach(player =>
-			{
-				if (caller!.CanTarget(player))
-				{
-					StripWeapons(caller, player, callerName, command);
-				}
-			});
-		}
-
-		public void StripWeapons(CCSPlayerController? caller, CCSPlayerController? player, string? callerName = null, CommandInfo? command = null)
-		{
-			if (!caller.CanTarget(player)) return;
-
-			callerName ??= caller == null ? "Console" : caller.PlayerName;
-
-			if (player == null || !player.IsValid || !player.PawnIsAlive || player.Connected != PlayerConnectedState.PlayerConnected)
+			if (player.Connected != PlayerConnectedState.PlayerConnected)
 				return;
 
-			player.RemoveWeapons();
+			GiveWeapon(caller, player, weaponName, callerName, command);
+		});
+	}
 
-			Helper.LogCommand(caller, $"css_strip {player.PlayerName}");
+	internal static void GiveWeapon(CCSPlayerController? caller, CCSPlayerController player, string weaponName, string? callerName = null, CommandInfo? command = null)
+	{
+		if (!caller.CanTarget(player)) return;
 
-			if (caller != null && SilentPlayers.Contains(caller.Slot)) return;
-			foreach (var controller in Helper.GetValidPlayers().Where(controller => controller is { IsValid: true, IsBot: false }))
+		// Set default caller name if not provided
+		callerName ??= caller != null ? caller.PlayerName : "Console";
+
+		// Give weapon to the player
+		player.GiveNamedItem(weaponName);
+
+		// Log the command
+		if (command == null)
+			Helper.LogCommand(caller, $"css_giveweapon {(string.IsNullOrEmpty(player.PlayerName) ? player.SteamID.ToString() : player.PlayerName)} {weaponName}");
+		else
+			Helper.LogCommand(caller, command);
+
+		// Determine message keys and arguments for the weapon give notification
+		var (activityMessageKey, adminActivityArgs) = 
+			("sa_admin_give_message", 
+				new object[] { callerName, player.PlayerName, weaponName });
+
+		// Display admin activity message to other players
+		if (caller == null || !SilentPlayers.Contains(caller.Slot))
+		{
+			Helper.ShowAdminActivity(activityMessageKey, callerName, adminActivityArgs);
+		}
+	}
+		
+	internal static void GiveWeapon(CCSPlayerController? caller, CCSPlayerController player, CsItem weapon, string? callerName = null, CommandInfo? command = null)
+	{
+		if (!caller.CanTarget(player)) return;
+
+		// Set default caller name if not provided
+		callerName ??= caller != null ? caller.PlayerName : "Console";
+
+		// Give weapon to the player
+		player.GiveNamedItem(weapon);
+
+		// Log the command
+		if (command == null)
+			Helper.LogCommand(caller, $"css_giveweapon {(string.IsNullOrEmpty(player.PlayerName) ? player.SteamID.ToString() : player.PlayerName)} {weapon.ToString()}");
+		else
+			Helper.LogCommand(caller, command);
+
+		// Determine message keys and arguments for the weapon give notification
+		var (activityMessageKey, adminActivityArgs) = 
+			("sa_admin_give_message", 
+				new object[] { callerName, player.PlayerName, weapon.ToString() });
+
+		// Display admin activity message to other players
+		if (caller == null || !SilentPlayers.Contains(caller.Slot))
+		{
+			Helper.ShowAdminActivity(activityMessageKey, callerName, adminActivityArgs);
+		}
+	}
+		
+	[ConsoleCommand("css_strip")]
+	[RequiresPermissions("@css/slay")]
+	[CommandHelper(minArgs: 1, usage: "<#userid or name>", whoCanExecute: CommandUsage.CLIENT_AND_SERVER)]
+	public void OnStripCommand(CCSPlayerController? caller, CommandInfo command)
+	{
+		var callerName = caller == null ? "Console" : caller.PlayerName;
+		var targets = GetTarget(command);
+		if (targets == null) return;
+
+		var playersToTarget = targets.Players.Where(player => player.IsValid && player is { PawnIsAlive: true, IsHLTV: false }).ToList();
+
+		playersToTarget.ForEach(player =>
+		{
+			if (caller!.CanTarget(player))
 			{
-				if (_localizer != null)
-				{
-					switch (Instance.Config.OtherSettings.ShowActivityType)
-					{
-						case 1:
-							controller.SendLocalizedMessage(_localizer,
-								"sa_admin_strip_message",
-								"",
-								player?.PlayerName ?? string.Empty);
-							break;
-						case 2:
-							controller.SendLocalizedMessage(_localizer,
-								"sa_admin_strip_message",
-								callerName,
-								player?.PlayerName ?? string.Empty);
-							break;
-					}
-				}
+				StripWeapons(caller, player, callerName, command);
 			}
-		}
+		});
+	}
 
-		[ConsoleCommand("css_hp")]
-		[RequiresPermissions("@css/slay")]
-		[CommandHelper(minArgs: 1, usage: "<#userid or name> <health>", whoCanExecute: CommandUsage.CLIENT_AND_SERVER)]
-		public void OnHpCommand(CCSPlayerController? caller, CommandInfo command)
+	internal static void StripWeapons(CCSPlayerController? caller, CCSPlayerController player, string? callerName = null, CommandInfo? command = null)
+	{
+		if (!caller.CanTarget(player)) return;
+
+		// Set default caller name if not provided
+		callerName ??= caller != null ? caller.PlayerName : "Console";
+
+		// Check if player is valid, alive, and connected
+		if (!player.IsValid || !player.PawnIsAlive || player.Connected != PlayerConnectedState.PlayerConnected)
+			return;
+
+		// Strip weapons from the player
+		player.RemoveWeapons();
+
+		// Log the command
+		if (command == null)
+			Helper.LogCommand(caller, $"css_strip {(string.IsNullOrEmpty(player.PlayerName) ? player.SteamID.ToString() : player.PlayerName)}");
+		else
+			Helper.LogCommand(caller, command);
+
+		// Determine message keys and arguments for the weapon strip notification
+		var (activityMessageKey, adminActivityArgs) = 
+			("sa_admin_strip_message", 
+				new object[] { callerName, player.PlayerName });
+
+		// Display admin activity message to other players
+		if (caller == null || !SilentPlayers.Contains(caller.Slot))
 		{
-			int.TryParse(command.GetArg(2), out var health);
+			Helper.ShowAdminActivity(activityMessageKey, callerName, adminActivityArgs);
+		}
+	}
 
-			var targets = GetTarget(command);
-			if (targets == null) return;
+	[ConsoleCommand("css_hp")]
+	[RequiresPermissions("@css/slay")]
+	[CommandHelper(minArgs: 1, usage: "<#userid or name> <health>", whoCanExecute: CommandUsage.CLIENT_AND_SERVER)]
+	public void OnHpCommand(CCSPlayerController? caller, CommandInfo command)
+	{
+		int.TryParse(command.GetArg(2), out var health);
 
-			var playersToTarget = targets.Players.Where(player => player.IsValid && player is { PawnIsAlive: true, IsHLTV: false }).ToList();
+		var targets = GetTarget(command);
+		if (targets == null) return;
 
-			playersToTarget.ForEach(player =>
+		var playersToTarget = targets.Players.Where(player => player.IsValid && player is { PawnIsAlive: true, IsHLTV: false }).ToList();
+
+		playersToTarget.ForEach(player =>
+		{
+			if (caller!.CanTarget(player))
 			{
-				if (caller!.CanTarget(player))
-				{
-					SetHp(caller, player, health, command);
-				}
-			});
-		}
+				SetHp(caller, player, health, command);
+			}
+		});
+	}
 
-		public void SetHp(CCSPlayerController? caller, CCSPlayerController? player, int health, CommandInfo? command = null)
+	internal static void SetHp(CCSPlayerController? caller, CCSPlayerController player, int health, CommandInfo? command = null)
+	{
+		if (!player.IsValid || player.IsHLTV) return;
+		if (!caller.CanTarget(player)) return;
+
+		// Set default caller name if not provided
+		var callerName = caller != null ? caller.PlayerName : "Console";
+
+		// Set player's health
+		player.SetHp(health);
+
+		// Log the command
+		if (command == null)
+			Helper.LogCommand(caller, $"css_hp {(string.IsNullOrEmpty(player.PlayerName) ? player.SteamID.ToString() : player.PlayerName)} {health}");
+		else
+			Helper.LogCommand(caller, command);
+
+		// Determine message keys and arguments for the HP set notification
+		var (activityMessageKey, adminActivityArgs) = 
+			("sa_admin_hp_message", 
+				new object[] { callerName, player.PlayerName });
+
+		// Display admin activity message to other players
+		if (caller == null || !SilentPlayers.Contains(caller.Slot))
 		{
-			if (player == null || !player.IsValid || player.IsHLTV)
+			Helper.ShowAdminActivity(activityMessageKey, callerName, adminActivityArgs);
+		}
+	}
+
+	[ConsoleCommand("css_speed")]
+	[RequiresPermissions("@css/slay")]
+	[CommandHelper(minArgs: 1, usage: "<#userid or name> <speed>", whoCanExecute: CommandUsage.CLIENT_AND_SERVER)]
+	public void OnSpeedCommand(CCSPlayerController? caller, CommandInfo command)
+	{
+		var callerName = caller == null ? "Console" : caller.PlayerName;
+		float.TryParse(command.GetArg(2), out var speed);
+
+		var targets = GetTarget(command);
+		if (targets == null) return;
+
+		var playersToTarget = targets.Players.Where(player => player.IsValid && player is { PawnIsAlive: true, IsHLTV: false }).ToList();
+
+		playersToTarget.ForEach(player =>
+		{
+			if (player.Connected != PlayerConnectedState.PlayerConnected)
 				return;
 
-			if (!caller.CanTarget(player)) return;
-
-			var callerName = caller == null ? "Console" : caller.PlayerName;
-
-			player.SetHp(health);
-
-			Helper.LogCommand(caller, $"css_hp {player.PlayerName} {health}");
-
-			if (caller != null && SilentPlayers.Contains(caller.Slot)) return;
-			foreach (var controller in Helper.GetValidPlayers().Where(controller => controller is { IsValid: true, IsBot: false }))
+			if (caller!.CanTarget(player))
 			{
-				if (_localizer != null)
-				{
-					switch (Instance.Config.OtherSettings.ShowActivityType)
-					{
-						case 1:
-							controller.SendLocalizedMessage(_localizer,
-								"sa_admin_hp_message",
-								"",
-								player?.PlayerName ?? string.Empty);
-							break;
-						case 2:
-							controller.SendLocalizedMessage(_localizer,
-								"sa_admin_hp_message",
-								callerName,
-								player?.PlayerName ?? string.Empty);
-							break;
-					}
-				}
+				SetSpeed(caller, player, speed, command);
 			}
-		}
+		});
+	}
 
-		[ConsoleCommand("css_speed")]
-		[RequiresPermissions("@css/slay")]
-		[CommandHelper(minArgs: 1, usage: "<#userid or name> <speed>", whoCanExecute: CommandUsage.CLIENT_AND_SERVER)]
-		public void OnSpeedCommand(CCSPlayerController? caller, CommandInfo command)
+	internal static void SetSpeed(CCSPlayerController? caller, CCSPlayerController player, float speed, CommandInfo? command = null)
+	{
+		if (!caller.CanTarget(player)) return;
+
+		// Set default caller name if not provided
+		var callerName = caller != null ? caller.PlayerName : "Console";
+
+		// Set player's speed
+		player.SetSpeed(speed);
+
+		// Log the command
+		if (command == null)
+			Helper.LogCommand(caller, $"css_speed {(string.IsNullOrEmpty(player.PlayerName) ? player.SteamID.ToString() : player.PlayerName)} {speed}");
+		else
+			Helper.LogCommand(caller, command);
+
+		// Determine message keys and arguments for the speed set notification
+		var (activityMessageKey, adminActivityArgs) = 
+			("sa_admin_speed_message", 
+				new object[] { callerName, player.PlayerName });
+
+		// Display admin activity message to other players
+		if (caller == null || !SilentPlayers.Contains(caller.Slot))
 		{
-			var callerName = caller == null ? "Console" : caller.PlayerName;
-			double.TryParse(command.GetArg(2), out var speed);
-
-			var targets = GetTarget(command);
-			if (targets == null) return;
-
-			var playersToTarget = targets.Players.Where(player => player.IsValid && player is { PawnIsAlive: true, IsHLTV: false }).ToList();
-
-			playersToTarget.ForEach(player =>
-			{
-				if (player.Connected != PlayerConnectedState.PlayerConnected)
-					return;
-
-				if (caller!.CanTarget(player))
-				{
-					SetSpeed(caller, player, speed, callerName, command);
-				}
-			});
+			Helper.ShowAdminActivity(activityMessageKey, callerName, adminActivityArgs);
 		}
+	}
 
-		public void SetSpeed(CCSPlayerController? caller, CCSPlayerController? player, double speed, string? callerName = null, CommandInfo? command = null)
-		{
-			if (!caller.CanTarget(player)) return;
+	[ConsoleCommand("css_gravity")]
+	[RequiresPermissions("@css/slay")]
+	[CommandHelper(minArgs: 1, usage: "<#userid or name> <gravity>", whoCanExecute: CommandUsage.CLIENT_AND_SERVER)]
+	public void OnGravityCommand(CCSPlayerController? caller, CommandInfo command)
+	{
+		var callerName = caller == null ? "Console" : caller.PlayerName;
+		float.TryParse(command.GetArg(2), out var gravity);
 
-			callerName ??= caller == null ? "Console" : caller.PlayerName;
-
-			player.SetSpeed((float)speed);
-
-			Helper.LogCommand(caller, $"css_speed {player?.PlayerName} {speed}");
-
-			if (caller != null && SilentPlayers.Contains(caller.Slot)) return;
-			foreach (var controller in Helper.GetValidPlayers().Where(controller => controller is { IsValid: true, IsBot: false }))
-			{
-				if (_localizer != null)
-				{
-					switch (Instance.Config.OtherSettings.ShowActivityType)
-					{
-						case 1:
-							controller.SendLocalizedMessage(_localizer,
-								"sa_admin_speed_message",
-								"",
-								player?.PlayerName ?? string.Empty);
-							break;
-						case 2:
-							controller.SendLocalizedMessage(_localizer,
-								"sa_admin_speed_message",
-								callerName,
-								player?.PlayerName ?? string.Empty);
-							break;
-					}
-				}
-			}
-		}
-
-		[ConsoleCommand("css_gravity")]
-		[RequiresPermissions("@css/slay")]
-		[CommandHelper(minArgs: 1, usage: "<#userid or name> <gravity>", whoCanExecute: CommandUsage.CLIENT_AND_SERVER)]
-		public void OnGravityCommand(CCSPlayerController? caller, CommandInfo command)
-		{
-			var callerName = caller == null ? "Console" : caller.PlayerName;
-			double.TryParse(command.GetArg(2), out var gravity);
-
-			var targets = GetTarget(command);
-			if (targets == null) return;
+		var targets = GetTarget(command);
+		if (targets == null) return;
 			
-			var playersToTarget = targets.Players.Where(player => player.IsValid && player is { PawnIsAlive: true, IsHLTV: false }).ToList();
+		var playersToTarget = targets.Players.Where(player => player.IsValid && player is { PawnIsAlive: true, IsHLTV: false }).ToList();
 
-			playersToTarget.ForEach(player =>
-			{
-				if (player.Connected != PlayerConnectedState.PlayerConnected)
-					return;
-
-				if (caller!.CanTarget(player))
-				{
-					SetGravity(caller, player, gravity, callerName, command);
-				}
-			});
-		}
-
-		public void SetGravity(CCSPlayerController? caller, CCSPlayerController? player, double gravity, string? callerName = null, CommandInfo? command = null)
+		playersToTarget.ForEach(player =>
 		{
-			if (!caller.CanTarget(player)) return;
+			if (player.Connected != PlayerConnectedState.PlayerConnected)
+				return;
 
-			callerName ??= caller == null ? "Console" : caller.PlayerName;
-
-			player.SetGravity((float)gravity);
-
-			Helper.LogCommand(caller, $"css_gravity {player?.PlayerName} {gravity}");
-
-			if (caller != null && SilentPlayers.Contains(caller.Slot)) return;
-			foreach (var controller in Helper.GetValidPlayers().Where(controller => controller is { IsValid: true, IsBot: false }))
+			if (caller!.CanTarget(player))
 			{
-				if (_localizer != null)
-				{
-					switch (Instance.Config.OtherSettings.ShowActivityType)
-					{
-						case 1:
-							controller.SendLocalizedMessage(_localizer,
-								"sa_admin_gravity_message",
-								"",
-								player?.PlayerName ?? string.Empty);
-							break;
-						case 2:
-							controller.SendLocalizedMessage(_localizer,
-								"sa_admin_gravity_message",
-								callerName,
-								player?.PlayerName ?? string.Empty);
-							break;
-					}
-				}
+				SetGravity(caller, player, gravity, command);
 			}
-		}
+		});
+	}
 
-		[ConsoleCommand("css_money")]
-		[RequiresPermissions("@css/slay")]
-		[CommandHelper(minArgs: 1, usage: "<#userid or name> <money>", whoCanExecute: CommandUsage.CLIENT_AND_SERVER)]
-		public void OnMoneyCommand(CCSPlayerController? caller, CommandInfo command)
+	internal static void SetGravity(CCSPlayerController? caller, CCSPlayerController player, float gravity, CommandInfo? command = null)
+	{
+		if (!caller.CanTarget(player)) return;
+
+		// Set default caller name if not provided
+		var callerName = caller != null ? caller.PlayerName : "Console";
+
+		// Set player's gravity
+		player.SetGravity(gravity);
+
+		// Log the command
+		if (command == null)
+			Helper.LogCommand(caller, $"css_gravity {(string.IsNullOrEmpty(player.PlayerName) ? player.SteamID.ToString() : player.PlayerName)} {gravity}");
+		else
+			Helper.LogCommand(caller, command);
+
+		// Determine message keys and arguments for the gravity set notification
+		var (activityMessageKey, adminActivityArgs) = 
+			("sa_admin_gravity_message", 
+				new object[] { callerName, player.PlayerName });
+
+		// Display admin activity message to other players
+		if (caller == null || !SilentPlayers.Contains(caller.Slot))
 		{
-			var callerName = caller == null ? "Console" : caller.PlayerName;
-			int.TryParse(command.GetArg(2), out var money);
-
-			var targets = GetTarget(command);
-			if (targets == null) return;
-
-			var playersToTarget = targets.Players.Where(player => player.IsValid && player is { PawnIsAlive: true, IsHLTV: false }).ToList();
-
-			playersToTarget.ForEach(player =>
-			{
-				if (player.Connected != PlayerConnectedState.PlayerConnected)
-					return;
-
-				if (caller!.CanTarget(player))
-				{
-					SetMoney(caller, player, money, callerName, command);
-				}
-			});
+			Helper.ShowAdminActivity(activityMessageKey, callerName, adminActivityArgs);
 		}
+	}
 
-		public void SetMoney(CCSPlayerController? caller, CCSPlayerController? player, int money, string? callerName = null, CommandInfo? command = null)
+	[ConsoleCommand("css_money")]
+	[RequiresPermissions("@css/slay")]
+	[CommandHelper(minArgs: 1, usage: "<#userid or name> <money>", whoCanExecute: CommandUsage.CLIENT_AND_SERVER)]
+	public void OnMoneyCommand(CCSPlayerController? caller, CommandInfo command)
+	{
+		var callerName = caller == null ? "Console" : caller.PlayerName;
+		int.TryParse(command.GetArg(2), out var money);
+
+		var targets = GetTarget(command);
+		if (targets == null) return;
+
+		var playersToTarget = targets.Players.Where(player => player.IsValid && player is { PawnIsAlive: true, IsHLTV: false }).ToList();
+
+		playersToTarget.ForEach(player =>
 		{
-			if (!caller.CanTarget(player)) return;
+			if (player.Connected != PlayerConnectedState.PlayerConnected)
+				return;
 
-			callerName ??= caller == null ? "Console" : caller.PlayerName;
-
-			player.SetMoney(money);
-
-			Helper.LogCommand(caller, $"css_money {player?.PlayerName} {money}");
-
-			if (caller != null && SilentPlayers.Contains(caller.Slot)) return;
-			foreach (var controller in Helper.GetValidPlayers().Where(controller => controller is { IsValid: true, IsBot: false }))
+			if (caller!.CanTarget(player))
 			{
-				if (_localizer != null)
-				{
-					switch (Instance.Config.OtherSettings.ShowActivityType)
-					{
-						case 1:
-							controller.SendLocalizedMessage(_localizer,
-								"sa_admin_money_message",
-								"",
-								player?.PlayerName ?? string.Empty);
-							break;
-						case 2:
-							controller.SendLocalizedMessage(_localizer,
-								"sa_admin_money_message",
-								callerName,
-								player?.PlayerName ?? string.Empty);
-							break;
-					}
-				}
+				SetMoney(caller, player, money, command);
 			}
-		}
+		});
+	}
 
-		[ConsoleCommand("css_god")]
-		[RequiresPermissions("@css/cheats")]
-		[CommandHelper(minArgs: 1, usage: "<#userid or name>", whoCanExecute: CommandUsage.CLIENT_AND_SERVER)]
-		public void OnGodCommand(CCSPlayerController? caller, CommandInfo command)
+	internal static void SetMoney(CCSPlayerController? caller, CCSPlayerController player, int money, CommandInfo? command = null)
+	{
+		if (!caller.CanTarget(player)) return;
+
+		// Set default caller name if not provided
+		var callerName = caller != null ? caller.PlayerName : "Console";
+
+		// Set player's money
+		player.SetMoney(money);
+
+		// Log the command
+		if (command == null)
+			Helper.LogCommand(caller, $"css_money {(string.IsNullOrEmpty(player.PlayerName) ? player.SteamID.ToString() : player.PlayerName)} {money}");
+		else
+			Helper.LogCommand(caller, command);
+
+		// Determine message keys and arguments for the money set notification
+		var (activityMessageKey, adminActivityArgs) = 
+			("sa_admin_money_message", 
+				new object[] { callerName, player.PlayerName });
+
+		// Display admin activity message to other players
+		if (caller == null || !SilentPlayers.Contains(caller.Slot))
 		{
-			var callerName = caller == null ? "Console" : caller.PlayerName;
-			var targets = GetTarget(command);
-			if (targets == null) return;
+			Helper.ShowAdminActivity(activityMessageKey, callerName, adminActivityArgs);
+		}
+	}
 
-			var playersToTarget = targets.Players.Where(player => player.IsValid && player is { PawnIsAlive: true, IsHLTV: false }).ToList();
+	[ConsoleCommand("css_god")]
+	[RequiresPermissions("@css/cheats")]
+	[CommandHelper(minArgs: 1, usage: "<#userid or name>", whoCanExecute: CommandUsage.CLIENT_AND_SERVER)]
+	public void OnGodCommand(CCSPlayerController? caller, CommandInfo command)
+	{
+		var callerName = caller == null ? "Console" : caller.PlayerName;
+		var targets = GetTarget(command);
+		if (targets == null) return;
 
-			playersToTarget.ForEach(player =>
+		var playersToTarget = targets.Players.Where(player => player.IsValid && player is { PawnIsAlive: true, IsHLTV: false }).ToList();
+
+		playersToTarget.ForEach(player =>
+		{
+			if (player.Connected != PlayerConnectedState.PlayerConnected)
+				return;
+
+			if (caller!.CanTarget(player))
 			{
-				if (player.Connected != PlayerConnectedState.PlayerConnected)
-					return;
+				God(caller, player, command);
+			}
+		});
+	}
 
-				if (caller!.CanTarget(player))
-				{
-					God(caller, player, callerName, command);
-				}
-			});
+	internal static void God(CCSPlayerController? caller, CCSPlayerController player, CommandInfo? command = null)
+	{
+		if (!caller.CanTarget(player)) return;
+
+		// Set default caller name if not provided
+		var callerName = caller != null ? caller.PlayerName : "Console";
+
+		// Toggle god mode for the player
+		if (!GodPlayers.Add(player.Slot))
+		{
+			GodPlayers.Remove(player.Slot);
 		}
 
-		public void God(CCSPlayerController? caller, CCSPlayerController? player, string? callerName = null, CommandInfo? command = null)
+		// Log the command
+		if (command == null)
+			Helper.LogCommand(caller, $"css_god {(string.IsNullOrEmpty(player.PlayerName) ? player.SteamID.ToString() : player.PlayerName)}");
+		else
+			Helper.LogCommand(caller, command);
+
+		// Determine message key and arguments for the god mode notification
+		var (activityMessageKey, adminActivityArgs) = 
+			("sa_admin_god_message", 
+				new object[] { callerName, player.PlayerName });
+
+		// Display admin activity message to other players
+		if (caller == null || !SilentPlayers.Contains(caller.Slot))
 		{
-			if (!caller.CanTarget(player)) return;
+			Helper.ShowAdminActivity(activityMessageKey, callerName, adminActivityArgs);
+		}
+	}
 
-			callerName ??= caller == null ? "Console" : caller.PlayerName;
+	[ConsoleCommand("css_slap")]
+	[RequiresPermissions("@css/slay")]
+	[CommandHelper(minArgs: 1, usage: "<#userid or name> [damage]", whoCanExecute: CommandUsage.CLIENT_AND_SERVER)]
+	public void OnSlapCommand(CCSPlayerController? caller, CommandInfo command)
+	{
+		var damage = 0;
 
-			if (player == null) return;
+		var targets = GetTarget(command);
+		if (targets == null) return;
+
+		var playersToTarget = targets.Players.Where(player => player.IsValid && player is { PawnIsAlive: true, IsHLTV: false }).ToList();
+
+		if (command.ArgCount >= 2)
+		{
+			int.TryParse(command.GetArg(2), out damage);
+		}
+
+		playersToTarget.ForEach(player =>
+		{
+			if (player.Connected != PlayerConnectedState.PlayerConnected)
+				return;
+
+			if (caller!.CanTarget(player))
+			{
+				Slap(caller, player, damage, command);
+			}
+		});
+	}
+
+	internal static void Slap(CCSPlayerController? caller, CCSPlayerController player, int damage, CommandInfo? command = null)
+	{
+		if (!caller.CanTarget(player)) return;
+
+		// Set default caller name if not provided
+		var callerName = caller != null ? caller.PlayerName : "Console";
+
+		// Apply slap damage to the player
+		player.Pawn.Value?.Slap(damage);
+
+		// Log the command
+		if (command == null)
+			Helper.LogCommand(caller, $"css_slap {(string.IsNullOrEmpty(player.PlayerName) ? player.SteamID.ToString() : player.PlayerName)} {damage}");
+		else
+			Helper.LogCommand(caller, command);
+
+		// Determine message key and arguments for the slap notification
+		var (activityMessageKey, adminActivityArgs) = 
+			("sa_admin_slap_message", 
+				new object[] { callerName, player.PlayerName });
+
+		// Display admin activity message to other players
+		if (caller != null && SilentPlayers.Contains(caller.Slot)) return;
 			
-			Helper.LogCommand(caller, $"css_god {player.PlayerName}");
+		if (_localizer != null)
+		{
+			Helper.ShowAdminActivity(activityMessageKey, callerName, adminActivityArgs);
+		}
+	}
 
-			if (!GodPlayers.Add(player.Slot))
-			{
-				GodPlayers.Remove(player.Slot);
-			}
+	[ConsoleCommand("css_team")]
+	[RequiresPermissions("@css/kick")]
+	[CommandHelper(minArgs: 2, usage: "<#userid or name> [<ct/tt/spec>] [-k]", whoCanExecute: CommandUsage.CLIENT_AND_SERVER)]
+	public void OnTeamCommand(CCSPlayerController? caller, CommandInfo command)
+	{
+		var callerName = caller == null ? "Console" : caller.PlayerName;
+		var teamName = command.GetArg(2).ToLower();
+		var _teamName = "SPEC";
+		var teamNum = CsTeam.Spectator;
 
-			if (caller != null && SilentPlayers.Contains(caller.Slot)) return;
-			foreach (var controller in Helper.GetValidPlayers().Where(controller => controller is { IsValid: true, IsBot: false }))
-			{
-				if (_localizer != null)
-				{
-					switch (Instance.Config.OtherSettings.ShowActivityType)
-					{
-						case 1:
-							controller.SendLocalizedMessage(_localizer,
-								"sa_admin_god_message",
-								"",
-								player?.PlayerName ?? string.Empty);
-							break;
-						case 2:
-							controller.SendLocalizedMessage(_localizer,
-								"sa_admin_god_message",
-								callerName,
-								player?.PlayerName ?? string.Empty);
-							break;
-					}
-				}
-			}
+		var targets = GetTarget(command);
+		if (targets == null) return;
+
+		var playersToTarget = targets.Players.Where(player => player is { IsValid: true, IsHLTV: false }).ToList();
+
+		switch (teamName)
+		{
+			case "ct":
+			case "counterterrorist":
+				teamNum = CsTeam.CounterTerrorist;
+				_teamName = "CT";
+				break;
+
+			case "t":
+			case "tt":
+			case "terrorist":
+				teamNum = CsTeam.Terrorist;
+				_teamName = "TT";
+				break;
+
+			case "swap":
+				_teamName = "SWAP";
+				break;
+
+			default:
+				teamNum = CsTeam.Spectator;
+				_teamName = "SPEC";
+				break;
 		}
 
-		[ConsoleCommand("css_slap")]
-		[RequiresPermissions("@css/slay")]
-		[CommandHelper(minArgs: 1, usage: "<#userid or name> [damage]", whoCanExecute: CommandUsage.CLIENT_AND_SERVER)]
-		public void OnSlapCommand(CCSPlayerController? caller, CommandInfo command)
+		var kill = command.GetArg(3).ToLower().Equals("-k");
+
+		playersToTarget.ForEach(player =>
 		{
-			var damage = 0;
+			ChangeTeam(caller, player, _teamName, teamNum, kill, command);
+		});
+	}
 
-			var targets = GetTarget(command);
-			if (targets == null) return;
+	internal static void ChangeTeam(CCSPlayerController? caller, CCSPlayerController player, string teamName, CsTeam teamNum, bool kill, CommandInfo? command = null)
+	{
+		// Check if the player is valid and connected
+		if (!player.IsValid || player.Connected != PlayerConnectedState.PlayerConnected)
+			return;
 
-			var playersToTarget = targets.Players.Where(player => player.IsValid && player is { PawnIsAlive: true, IsHLTV: false }).ToList();
+		// Ensure the caller can target the player
+		if (!caller.CanTarget(player)) return;
 
-			if (command.ArgCount >= 2)
-			{
-				int.TryParse(command.GetArg(2), out damage);
-			}
+		// Set default caller name if not provided
+		var callerName = caller != null ? caller.PlayerName : "Console";
 
-			playersToTarget.ForEach(player =>
-			{
-				if (player.Connected != PlayerConnectedState.PlayerConnected)
-					return;
-
-				if (caller!.CanTarget(player))
-				{
-					Slap(caller, player, damage, command);
-				}
-			});
+		// Change team based on the provided teamName and conditions
+		if (!teamName.Equals("swap", StringComparison.OrdinalIgnoreCase))
+		{
+			if (player.PawnIsAlive && teamNum != CsTeam.Spectator && !kill && Instance.Config.OtherSettings.TeamSwitchType == 1)
+				player.SwitchTeam(teamNum);
+			else
+				player.ChangeTeam(teamNum);
 		}
-
-		public void Slap(CCSPlayerController? caller, CCSPlayerController? player, int damage, CommandInfo? command = null)
+		else
 		{
-			if (!caller.CanTarget(player)) return;
-
-			var callerName = caller == null ? "Console" : caller.PlayerName;
-			player!.Pawn.Value!.Slap(damage);
-
-			Helper.LogCommand(caller, $"css_slap {player?.PlayerName} {damage}");
-
-			if (_localizer == null)
-				return;
-
-			if (caller != null && SilentPlayers.Contains(caller.Slot)) return;
-
-			foreach (var controller in Helper.GetValidPlayers().Where(controller => controller is { IsValid: true, IsBot: false }))
+			if (player.TeamNum != (byte)CsTeam.Spectator)
 			{
-				if (_localizer != null)
-				{
-					switch (Instance.Config.OtherSettings.ShowActivityType)
-					{
-						case 1:
-							controller.SendLocalizedMessage(_localizer,
-								"sa_admin_slap_message",
-								"",
-								player?.PlayerName ?? string.Empty);
-							break;
-						case 2:
-							controller.SendLocalizedMessage(_localizer,
-								"sa_admin_slap_message",
-								callerName,
-								player?.PlayerName ?? string.Empty);
-							break;
-					}
-				}
-			}
-		}
-
-		[ConsoleCommand("css_team")]
-		[RequiresPermissions("@css/kick")]
-		[CommandHelper(minArgs: 2, usage: "<#userid or name> [<ct/tt/spec>] [-k]", whoCanExecute: CommandUsage.CLIENT_AND_SERVER)]
-		public void OnTeamCommand(CCSPlayerController? caller, CommandInfo command)
-		{
-			var callerName = caller == null ? "Console" : caller.PlayerName;
-			var teamName = command.GetArg(2).ToLower();
-			var _teamName = "SPEC";
-			var teamNum = CsTeam.Spectator;
-
-			var targets = GetTarget(command);
-			if (targets == null) return;
-
-			var playersToTarget = targets.Players.Where(player => player is { IsValid: true, IsHLTV: false }).ToList();
-
-			switch (teamName)
-			{
-				case "ct":
-				case "counterterrorist":
-					teamNum = CsTeam.CounterTerrorist;
-					_teamName = "CT";
-					break;
-
-				case "t":
-				case "tt":
-				case "terrorist":
-					teamNum = CsTeam.Terrorist;
-					_teamName = "TT";
-					break;
-
-				case "swap":
-					_teamName = "SWAP";
-					break;
-
-				default:
-					teamNum = CsTeam.Spectator;
-					_teamName = "SPEC";
-					break;
-			}
-
-			var kill = command.GetArg(3).ToLower().Equals("-k");
-
-			playersToTarget.ForEach(player =>
-			{
-				ChangeTeam(caller, player, _teamName, teamNum, kill, callerName, command);
-			});
-		}
-
-		public void ChangeTeam(CCSPlayerController? caller, CCSPlayerController? player, string teamName, CsTeam teamNum, bool kill, string? callerName = null, CommandInfo? command = null)
-		{
-			if (player == null || !player.IsValid || player.Connected != PlayerConnectedState.PlayerConnected)
-				return;
-
-			if (!caller.CanTarget(player)) return;
-
-			callerName ??= caller == null ? "Console" : caller.PlayerName;
-
-			if (!teamName.Equals("swap"))
-			{
-				if (player.PawnIsAlive && teamNum != CsTeam.Spectator && !kill && Config.OtherSettings.TeamSwitchType == 1)
-					player.SwitchTeam(teamNum);
+				var _teamNum = (CsTeam)player.TeamNum == CsTeam.Terrorist ? CsTeam.CounterTerrorist : CsTeam.Terrorist;
+				teamName = _teamNum == CsTeam.Terrorist ? "TT" : "CT";
+				if (player.PawnIsAlive && !kill && Instance.Config.OtherSettings.TeamSwitchType == 1)
+					player.SwitchTeam(_teamNum);
 				else
-					player?.ChangeTeam(teamNum);
+					player.ChangeTeam(_teamNum);
+			}
+		}
+
+		// Log the command
+		if (command == null)
+			Helper.LogCommand(caller, $"css_team {player.PlayerName} {teamName}");
+		else
+			Helper.LogCommand(caller, command);
+
+		// Determine message key and arguments for the team change notification
+		var activityMessageKey = "sa_admin_team_message";
+		var adminActivityArgs = new object[] { callerName, player.PlayerName, teamName };
+
+		// Display admin activity message to other players
+		if (caller != null && SilentPlayers.Contains(caller.Slot)) return;
+		    
+		Helper.ShowAdminActivity(activityMessageKey, callerName, adminActivityArgs);
+	}
+
+	[ConsoleCommand("css_rename", "Rename a player.")]
+	[CommandHelper(1, "<#userid or name> <new name>")]
+	[RequiresPermissions("@css/kick")]
+	public void OnRenameCommand(CCSPlayerController? caller, CommandInfo command)
+	{
+		// Set default caller name if not provided
+		var callerName = caller == null ? "Console" : caller.PlayerName;
+
+		// Get the new name from the command arguments
+		var newName = command.GetArg(2);
+
+		// Check if the new name is valid
+		if (string.IsNullOrEmpty(newName))
+			return;
+
+		// Retrieve the targets based on the command
+		var targets = GetTarget(command);
+		if (targets == null) return;
+
+		// Filter out valid players from the targets
+		var playersToTarget = targets.Players.Where(player => player is { IsValid: true, IsHLTV: false }).ToList();
+
+		// Log the command
+		Helper.LogCommand(caller, command);
+
+		// Process each player to rename
+		playersToTarget.ForEach(player =>
+		{
+			// Check if the player is connected and can be targeted
+			if (player.Connected != PlayerConnectedState.PlayerConnected || !caller!.CanTarget(player))
+				return;
+
+			// Rename the player
+			player.Rename(newName);
+
+			// Determine message key and arguments for the rename notification
+			var activityMessageKey = "sa_admin_rename_message";
+			var adminActivityArgs = new object[] { callerName, player.PlayerName, newName };
+
+			// Display admin activity message to other players
+			if (caller != null && SilentPlayers.Contains(caller.Slot)) return;
+				
+			Helper.ShowAdminActivity(activityMessageKey, callerName, adminActivityArgs);
+		});
+	}
+
+	[ConsoleCommand("css_prename", "Permanent rename a player.")]
+	[CommandHelper(1, "<#userid or name> <new name>")]
+	[RequiresPermissions("@css/ban")]
+	public void OnPRenameCommand(CCSPlayerController? caller, CommandInfo command)
+	{
+		// Set default caller name if not provided
+		var callerName = caller == null ? "Console" : caller.PlayerName;
+
+		// Get the new name from the command arguments
+		var newName = command.GetArg(2);
+
+		// Retrieve the targets based on the command
+		var targets = GetTarget(command);
+		if (targets == null) return;
+
+		// Filter out valid players from the targets
+		var playersToTarget = targets.Players.Where(player => player is { IsValid: true, IsHLTV: false }).ToList();
+
+		// Log the command
+		Helper.LogCommand(caller, command);
+
+		// Process each player to rename
+		playersToTarget.ForEach(player =>
+		{
+			// Check if the player is connected and can be targeted
+			if (player.Connected != PlayerConnectedState.PlayerConnected || !caller!.CanTarget(player))
+				return;
+
+			// Determine if the new name is valid and update the renamed players list
+			if (!string.IsNullOrEmpty(newName))
+			{
+				RenamedPlayers[player.SteamID] = newName;
+				player.Rename(newName);
 			}
 			else
 			{
-				if (player.TeamNum != (byte)CsTeam.Spectator)
-				{
-					var _teamNum = (CsTeam)player.TeamNum == CsTeam.Terrorist ? CsTeam.CounterTerrorist : CsTeam.Terrorist;
-					teamName = _teamNum == CsTeam.Terrorist ? "TT" : "CT";
-					if (player.PawnIsAlive && !kill && Config.OtherSettings.TeamSwitchType == 1)
-					{
-						player.SwitchTeam(_teamNum);
-					}
-					else
-					{
-						player.ChangeTeam(_teamNum);
-					}
-				}
+				RenamedPlayers.Remove(player.SteamID);
 			}
 
-			if (caller == null || !SilentPlayers.Contains(caller.Slot))
-			{
-				foreach (var controller in Helper.GetValidPlayers().Where(controller => controller is { IsValid: true, IsBot: false }))
-				{
-					if (_localizer != null)
-					{
-						switch (Instance.Config.OtherSettings.ShowActivityType)
-						{
-							case 1:
-								controller.SendLocalizedMessage(_localizer,
-									"sa_admin_team_message",
-									"",
-									player?.PlayerName ?? string.Empty,
-									teamName);
-								break;
-							case 2:
-								controller.SendLocalizedMessage(_localizer,
-									"sa_admin_team_message",
-									callerName,
-									player?.PlayerName ?? string.Empty,
-									teamName);
-								break;
-						}
-					}
-				}
-			}
+			// Determine message key and arguments for the rename notification
+			var activityMessageKey = "sa_admin_rename_message";
+			var adminActivityArgs = new object[] { callerName, player.PlayerName, newName };
 
-			Helper.LogCommand(caller, $"css_team {player?.PlayerName} {teamName}");
-		}
-
-		[ConsoleCommand("css_rename", "Rename a player.")]
-		[CommandHelper(1, "<#userid or name> <new name>")]
-		[RequiresPermissions("@css/kick")]
-		public void OnRenameCommand(CCSPlayerController? caller, CommandInfo command)
-		{
-			var callerName = caller == null ? "Console" : caller.PlayerName;
-			var newName = command.GetArg(2);
-
-			if (string.IsNullOrEmpty(newName))
-				return;
-
-			var targets = GetTarget(command);
-			if (targets == null) return;
-			var playersToTarget = targets.Players.Where(player => player is { IsValid: true, IsHLTV: false }).ToList();
-
-			Helper.LogCommand(caller, command);
-
-			playersToTarget.ForEach(player =>
-			{
-				if (player.Connected != PlayerConnectedState.PlayerConnected)
-					return;
-
-				if (!caller!.CanTarget(player)) return;
-				if (caller == null || !SilentPlayers.Contains(caller.Slot))
-				{
-					foreach (var controller in Helper.GetValidPlayers().Where(controller => controller is { IsValid: true, IsBot: false }))
-					{
-						if (_localizer != null)
-						{
-							switch (Instance.Config.OtherSettings.ShowActivityType)
-							{
-								case 1:
-									controller.SendLocalizedMessage(_localizer,
-										"sa_admin_rename_message",
-										"",
-										player?.PlayerName ?? string.Empty,
-										newName);
-									break;
-								case 2:
-									controller.SendLocalizedMessage(_localizer,
-										"sa_admin_rename_message",
-										callerName,
-										player?.PlayerName ?? string.Empty,
-										newName);
-									break;
-							}
-						}
-					}
-				}
-
-				player.Rename(newName);
-			});
-		}
-
-		[ConsoleCommand("css_prename", "Permanent rename a player.")]
-		[CommandHelper(1, "<#userid or name> <new name>")]
-		[RequiresPermissions("@css/ban")]
-		public void OnPRenameCommand(CCSPlayerController? caller, CommandInfo command)
-		{
-			var callerName = caller == null ? "Console" : caller.PlayerName;
-			var newName = command.GetArg(2);
-
-			var targets = GetTarget(command);
-			if (targets == null) return;
-			var playersToTarget = targets.Players.Where(player => player is { IsValid: true, IsHLTV: false }).ToList();
-
-			Helper.LogCommand(caller, command);
-
-			playersToTarget.ForEach(player =>
-			{
-				if (player.Connected != PlayerConnectedState.PlayerConnected)
-					return;
-
-				if (!caller!.CanTarget(player)) return;
-				if (caller == null || !SilentPlayers.Contains(caller.Slot) && !string.IsNullOrEmpty(newName))
-				{
-					foreach (var controller in Helper.GetValidPlayers().Where(controller => controller is { IsValid: true, IsBot: false }))
-					{
-						if (_localizer != null)
-						{
-							switch (Instance.Config.OtherSettings.ShowActivityType)
-							{
-								case 1:
-									controller.SendLocalizedMessage(_localizer,
-										"sa_admin_rename_message",
-										"",
-										player.PlayerName ?? string.Empty,
-										newName);
-									break;
-								case 2:
-									controller.SendLocalizedMessage(_localizer,
-										"sa_admin_rename_message",
-										callerName,
-										player.PlayerName ?? string.Empty,
-										newName);
-									break;
-							}
-						}
-					}
-				}
-
-				if (!string.IsNullOrEmpty(newName))
-				{
-					RenamedPlayers[player.SteamID] = newName;
-				}
-				else
-				{
-					RenamedPlayers.Remove(player.SteamID);
-				}
-
-				player.Rename(newName);
-			});
-		}
-
-		[ConsoleCommand("css_respawn", "Respawn a dead player.")]
-		[CommandHelper(1, "<#userid or name>")]
-		[RequiresPermissions("@css/cheats")]
-		public void OnRespawnCommand(CCSPlayerController? caller, CommandInfo command)
-		{
-			var callerName = caller == null ? "Console" : caller.PlayerName;
-
-			var targets = GetTarget(command);
-			if (targets == null) return;
-			var playersToTarget = targets.Players.Where(player => player is { IsValid: true, IsHLTV: false }).ToList();
-
-			playersToTarget.ForEach(player =>
-			{
-				if (player.Connected != PlayerConnectedState.PlayerConnected)
-					return;
-
-				if (caller!.CanTarget(player))
-				{
-					Respawn(caller, player, callerName, command);
-				}
-			});
-		}
-
-		public void Respawn(CCSPlayerController? caller, CCSPlayerController? player, string? callerName = null, CommandInfo? command = null)
-		{
-			if (!caller.CanTarget(player)) return;
-
-			callerName ??= caller == null ? "Console" : caller.PlayerName;
-
-			if (_cBasePlayerControllerSetPawnFunc == null || player?.PlayerPawn.Value == null || !player.PlayerPawn.IsValid) return;
-
-			var playerPawn = player.PlayerPawn.Value;
-			_cBasePlayerControllerSetPawnFunc.Invoke(player, playerPawn, true, false);
-			VirtualFunction.CreateVoid<CCSPlayerController>(player.Handle,
-															GameData.GetOffset("CCSPlayerController_Respawn"))(player);
-
-			Helper.LogCommand(caller, $"css_respawn {player?.PlayerName}");
-
+			// Display admin activity message to other players
 			if (caller != null && SilentPlayers.Contains(caller.Slot)) return;
-			foreach (var controller in Helper.GetValidPlayers().Where(controller => controller is { IsValid: true, IsBot: false }))
+				
+			Helper.ShowAdminActivity(activityMessageKey, callerName, adminActivityArgs);
+		});
+	}
+
+	[ConsoleCommand("css_respawn", "Respawn a dead player.")]
+	[CommandHelper(1, "<#userid or name>")]
+	[RequiresPermissions("@css/cheats")]
+	public void OnRespawnCommand(CCSPlayerController? caller, CommandInfo command)
+	{
+		var callerName = caller == null ? "Console" : caller.PlayerName;
+
+		var targets = GetTarget(command);
+		if (targets == null) return;
+		var playersToTarget = targets.Players.Where(player => player is { IsValid: true, IsHLTV: false }).ToList();
+
+		playersToTarget.ForEach(player =>
+		{
+			if (player.Connected != PlayerConnectedState.PlayerConnected)
+				return;
+
+			if (caller!.CanTarget(player))
 			{
-				if (_localizer != null)
-				{
-					switch (Instance.Config.OtherSettings.ShowActivityType)
-					{
-						case 1:
-							controller.SendLocalizedMessage(_localizer,
-								"sa_admin_respawn_message",
-								"",
-								player?.PlayerName ?? string.Empty);
-							break;
-						case 2:
-							controller.SendLocalizedMessage(_localizer,
-								"sa_admin_respawn_message",
-								callerName,
-								player?.PlayerName ?? string.Empty);
-							break;
-					}
-				}
+				Respawn(caller, player, callerName, command);
+			}
+		});
+	}
+
+	internal static void Respawn(CCSPlayerController? caller, CCSPlayerController player, string? callerName = null, CommandInfo? command = null)
+	{
+		// Check if the caller can target the player
+		if (!caller.CanTarget(player)) return;
+
+		// Set default caller name if not provided
+		callerName ??= caller == null ? "Console" : caller.PlayerName;
+		
+		// Ensure the player's pawn is valid before attempting to respawn
+		if (_cBasePlayerControllerSetPawnFunc == null || player?.PlayerPawn.Value == null || !player.PlayerPawn.IsValid) return;
+
+		// Perform the respawn operation
+		var playerPawn = player.PlayerPawn.Value;
+		_cBasePlayerControllerSetPawnFunc.Invoke(player, playerPawn, true, false);
+		VirtualFunction.CreateVoid<CCSPlayerController>(player.Handle, GameData.GetOffset("CCSPlayerController_Respawn"))(player);
+
+		if (player.UserId.HasValue && PlayersInfo.TryGetValue(player.UserId.Value, out var value) && value.DiePosition != null)
+			playerPawn.Teleport(value.DiePosition?.Position, value.DiePosition?.Angle);
+
+		// Log the command
+		if (command == null)
+			Helper.LogCommand(caller, $"css_respawn {(string.IsNullOrEmpty(player.PlayerName) ? player.SteamID.ToString() : player.PlayerName)}");
+		else
+			Helper.LogCommand(caller, command);
+
+		// Determine message key and arguments for the respawn notification
+		var activityMessageKey = "sa_admin_respawn_message";
+		var adminActivityArgs = new object[] { callerName, player.PlayerName };
+
+		// Display admin activity message to other players
+		if (caller != null && SilentPlayers.Contains(caller.Slot)) return;
+			
+		Helper.ShowAdminActivity(activityMessageKey, callerName, adminActivityArgs);
+	}
+
+	[ConsoleCommand("css_tp", "Teleport to a player.")]
+	[ConsoleCommand("css_tpto", "Teleport to a player.")]
+	[ConsoleCommand("css_goto", "Teleport to a player.")]
+	[CommandHelper(1, "<#userid or name>")]
+	[RequiresPermissions("@css/kick")]
+	public void OnGotoCommand(CCSPlayerController? caller, CommandInfo command)
+	{
+		// Check if the caller is valid and has a live pawn
+		if (caller == null || !caller.PawnIsAlive) return;
+
+		// Get the target players
+		var targets = GetTarget(command);
+		if (targets == null || targets.Count() > 1) return;
+
+		var playersToTarget = targets.Players
+			.Where(player => player is { IsValid: true, IsHLTV: false })
+			.ToList();
+
+		// Log the command
+		Helper.LogCommand(caller, command);
+
+		// Process each player to teleport
+		foreach (var player in playersToTarget.Where(player => player is { Connected: PlayerConnectedState.PlayerConnected, PawnIsAlive: true }).Where(caller.CanTarget))
+		{
+			if (caller.PlayerPawn.Value == null)
+				continue;
+
+			// Teleport the caller to the player and toggle noclip
+			caller.TeleportPlayer(player);
+			caller.PlayerPawn.Value.ToggleNoclip();
+
+			// Set a timer to toggle noclip back after 3 seconds
+			AddTimer(3, () => caller.PlayerPawn.Value.ToggleNoclip());
+
+			// Prepare message key and arguments for the teleport notification
+			var activityMessageKey = "sa_admin_tp_message";
+			var adminActivityArgs = new object[] { player.PlayerName };
+
+			// Show admin activity
+			if (!SilentPlayers.Contains(caller.Slot) && _localizer != null)
+			{
+				Helper.ShowAdminActivity(activityMessageKey, caller.PlayerName, adminActivityArgs);
 			}
 		}
+	}
 
-		[ConsoleCommand("css_tp", "Teleport to a player.")]
-		[ConsoleCommand("css_tpto", "Teleport to a player.")]
-		[ConsoleCommand("css_goto", "Teleport to a player.")]
-		[CommandHelper(1, "<#userid or name>")]
-		[RequiresPermissions("@css/kick")]
-		public void OnGotoCommand(CCSPlayerController? caller, CommandInfo command)
+	[ConsoleCommand("css_bring", "Teleport a player to you.")]
+	[ConsoleCommand("css_tphere", "Teleport a player to you.")]
+	[CommandHelper(1, "<#userid or name>")]
+	[RequiresPermissions("@css/kick")]
+	public void OnBringCommand(CCSPlayerController? caller, CommandInfo command)
+	{
+		// Check if the caller is valid and has a live pawn
+		if (caller == null || !caller.PawnIsAlive) return;
+
+		// Get the target players
+		var targets = GetTarget(command);
+		if (targets == null || targets.Count() > 1) return;
+
+		var playersToTarget = targets.Players
+			.Where(player => player is { IsValid: true, IsHLTV: false })
+			.ToList();
+
+		// Log the command
+		Helper.LogCommand(caller, command);
+
+		// Process each player to teleport
+		foreach (var player in playersToTarget.Where(player => player is { Connected: PlayerConnectedState.PlayerConnected, PawnIsAlive: true }).Where(caller.CanTarget))
 		{
-			if (caller == null || !caller.PawnIsAlive) return;
+			if (caller.PlayerPawn.Value == null)
+				continue;
+			
+			// Teleport the player to the caller and toggle noclip
+			player.TeleportPlayer(caller);
+			caller.PlayerPawn.Value.ToggleNoclip();
 
-			var targets = GetTarget(command);
+			// Set a timer to toggle noclip back after 3 seconds
+			AddTimer(3, () => caller.PlayerPawn.Value.ToggleNoclip());
 
-			if (targets == null || targets.Count() > 1)
-				return;
+			// Prepare message key and arguments for the bring notification
+			var activityMessageKey = "sa_admin_bring_message";
+			var adminActivityArgs = new object[] { player.PlayerName };
 
-			var playersToTarget = targets.Players.Where(player => player is { IsValid: true, IsHLTV: false }).ToList();
-
-			Helper.LogCommand(caller, command);
-
-			playersToTarget.ForEach(player =>
+			// Show admin activity
+			if (!SilentPlayers.Contains(caller.Slot) && _localizer != null)
 			{
-				if (player.Connected != PlayerConnectedState.PlayerConnected || !player.PawnIsAlive)
-					return;
-
-				if (!caller.CanTarget(player)) return;
-				caller.TeleportPlayer(player);
-				caller.Pawn.Value!.ToggleNoclip();
-
-				AddTimer(3, () =>
-				{
-					caller.Pawn.Value!.ToggleNoclip();
-				});
-
-				if (SilentPlayers.Contains(caller.Slot)) return;
-				foreach (var controller in Helper.GetValidPlayers().Where(controller => controller is { IsValid: true, IsBot: false }))
-				{
-					if (_localizer != null)
-					{
-						switch (Instance.Config.OtherSettings.ShowActivityType)
-						{
-							case 1:
-								controller.SendLocalizedMessage(_localizer,
-									"sa_admin_tp_message",
-									"",
-									player.PlayerName ?? string.Empty);
-								break;
-							case 2:
-								controller.SendLocalizedMessage(_localizer,
-									"sa_admin_tp_message",
-									caller.PlayerName,
-									player.PlayerName ?? string.Empty);
-								break;
-						}
-					}
-				}
-			});
-		}
-
-		[ConsoleCommand("css_bring", "Teleport a player to you.")]
-		[ConsoleCommand("css_tphere", "Teleport a player to you.")]
-		[CommandHelper(1, "<#userid or name>")]
-		[RequiresPermissions("@css/kick")]
-		public void OnBringCommand(CCSPlayerController? caller, CommandInfo command)
-		{
-			if (caller == null || !caller.PawnIsAlive) return;
-
-			var targets = GetTarget(command);
-
-			if (targets == null || targets.Count() > 1)
-				return;
-
-			var playersToTarget = targets.Players.Where(player => player is { IsValid: true, IsHLTV: false }).ToList();
-
-			Helper.LogCommand(caller, command);
-
-			playersToTarget.ForEach(player =>
-			{
-				if (player.Connected != PlayerConnectedState.PlayerConnected || !player.PawnIsAlive)
-					return;
-
-				if (!caller.CanTarget(player)) return;
-				player.TeleportPlayer(caller);
-				caller.Pawn.Value!.ToggleNoclip();
-
-				AddTimer(3, () =>
-				{
-					caller.Pawn.Value!.ToggleNoclip();
-				});
-
-				if (SilentPlayers.Contains(caller.Slot)) return;
-				foreach (var controller in Helper.GetValidPlayers().Where(controller => controller is { IsValid: true, IsBot: false }))
-				{
-					if (_localizer != null)
-					{
-						switch (Instance.Config.OtherSettings.ShowActivityType)
-						{
-							case 1:
-								controller.SendLocalizedMessage(_localizer,
-									"sa_admin_bring_message",
-									"",
-									player.PlayerName ?? string.Empty);
-								break;
-							case 2:
-								controller.SendLocalizedMessage(_localizer,
-									"sa_admin_bring_message",
-									caller.PlayerName,
-									player.PlayerName ?? string.Empty);
-								break;
-						}
-					}
-				}
-			});
+				Helper.ShowAdminActivity(activityMessageKey, caller.PlayerName, adminActivityArgs);
+			}
 		}
 	}
 }

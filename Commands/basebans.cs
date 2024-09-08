@@ -1,7 +1,6 @@
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Core.Attributes.Registration;
-using CounterStrikeSharp.API.Core.Translations;
 using CounterStrikeSharp.API.Modules.Admin;
 using CounterStrikeSharp.API.Modules.Commands;
 using CounterStrikeSharp.API.Modules.Entities;
@@ -50,137 +49,82 @@ public partial class CS2_SimpleAdmin
 		});
 	}
 
-	internal void Ban(CCSPlayerController? caller, CCSPlayerController? player, int time, string reason, string? callerName = null, BanManager? banManager = null, CommandInfo? command = null)
+	internal void Ban(CCSPlayerController? caller, CCSPlayerController player, int time, string reason, string? callerName = null, BanManager? banManager = null, CommandInfo? command = null, bool silent = false)
 	{
-		if (Database == null || player is null || !player.IsValid || !player.UserId.HasValue) return;
-		if (!caller.CanTarget(player)) return;
+	    if (Database == null || player == null || !player.IsValid || !player.UserId.HasValue) return;
+	    if (!caller.CanTarget(player)) return;
+	    if (!CheckValidBan(caller, time)) return;
 
-		if (CheckValidBan(caller, time) == false)
-			return;
+	    // Set default caller name if not provided
+	    callerName ??= "Console";
 
-		callerName ??= caller == null ? "Console" : caller.PlayerName;
+	    // Freeze player pawn if alive
+	    if (player.PawnIsAlive)
+	    {
+	        player.Pawn.Value?.Freeze();
+	    }
 
-		if (player.PawnIsAlive)
-		{
-			player.Pawn.Value?.Freeze();
-		}
+	    // Get player and admin information
+	    var playerInfo = PlayersInfo[player.UserId.Value];
+	    var adminInfo = caller != null && caller.UserId.HasValue ? PlayersInfo[caller.UserId.Value] : null;
 
-		var playerInfo = PlayersInfo[player.UserId.Value];
-		var adminInfo = caller != null && caller.UserId.HasValue ? PlayersInfo[caller.UserId.Value] : null;
+	    // Asynchronously handle banning logic
+	    Task.Run(async () =>
+	    {
+	        await (banManager ??= new BanManager(Database, Config)).BanPlayer(playerInfo, adminInfo, reason, time);
+	    });
 
-		Task.Run(async () =>
-		{
-			banManager ??= new BanManager(Database, Config);
-			await banManager.BanPlayer(playerInfo, adminInfo, reason, time);
-		});
-		
-		if (playerInfo.IpAddress != null && !BannedPlayers.Contains(playerInfo.IpAddress))
-			BannedPlayers.Add(playerInfo.IpAddress);
-		if (!BannedPlayers.Contains(player.SteamID.ToString()))
-			BannedPlayers.Add(player.SteamID.ToString());
+	    // Update banned players list
+	    if (playerInfo.IpAddress != null && !BannedPlayers.Contains(playerInfo.IpAddress))
+	        BannedPlayers.Add(playerInfo.IpAddress);
+	    if (!BannedPlayers.Contains(player.SteamID.ToString()))
+	        BannedPlayers.Add(player.SteamID.ToString());
 
-		if (time == 0)
-		{
-			if (player is { IsBot: false })
-				using (new WithTemporaryCulture(player.GetLanguage()))
-				{
-					switch (Config.OtherSettings.ShowActivityType)
-					{
-						case 1:
-							player.PrintToCenter(_localizer!["sa_player_ban_message_perm", reason, caller == null ? "Console" : _localizer["sa_admin"]]);
-							break;
-						case 2:
-							player.PrintToCenter(_localizer!["sa_player_ban_message_perm", reason, caller == null ? "Console" : caller.PlayerName]);
-							break;
-					}
-				}
+	    // Determine message keys and arguments based on ban time
+	    var (messageKey, activityMessageKey, centerArgs, adminActivityArgs) = time == 0
+		    ? ("sa_player_ban_message_perm", "sa_admin_ban_message_perm",
+			    [callerName, reason, "CALLER"],
+			    [callerName, "CALLER", player.PlayerName, reason])
+		    : ("sa_player_ban_message_time", "sa_admin_ban_message_time", 
+			    new object[] { callerName, reason, time, "CALLER" },
+			    new object[] { callerName, "CALLER", player.PlayerName, reason, time });
 
-			if (caller == null || !SilentPlayers.Contains(caller.Slot))
-			{
-				foreach (var controller in Helper.GetValidPlayers().Where(controller => controller is { IsValid: true, IsBot: false }))
-				{
-					if (_localizer != null)
-					{
-						switch (Instance.Config.OtherSettings.ShowActivityType)
-						{
-							case 1:
-								controller.SendLocalizedMessage(_localizer,
-									"sa_admin_ban_message_perm",
-									"",
-									player.PlayerName ?? string.Empty,
-									reason);
-								break;
-							case 2:
-								controller.SendLocalizedMessage(_localizer,
-									"sa_admin_ban_message_perm",
-									callerName,
-									player.PlayerName ?? string.Empty,
-									reason);
-								break;
-						}
-					}
-				}
-			}
-		}
-		else
-		{
-			if (!player.IsBot)
-				using (new WithTemporaryCulture(player.GetLanguage()))
-				{
-					switch (Config.OtherSettings.ShowActivityType)
-					{
-						case 1:
-							player.PrintToCenter(_localizer!["sa_player_ban_message_time", reason, time, caller == null ? "Console" : _localizer["sa_admin"]]);
-							break;
-						case 2:
-							player.PrintToCenter(_localizer!["sa_player_ban_message_time", reason, time, caller == null ? "Console" : caller.PlayerName]);
-							break;
-					}
-				}
-			if (caller == null || !SilentPlayers.Contains(caller.Slot))
-			{
-				foreach (var controller in Helper.GetValidPlayers().Where(controller => controller is { IsValid: true, IsBot: false }))
-				{
-					if (_localizer != null)
-					{
-						switch (Instance.Config.OtherSettings.ShowActivityType)
-						{
-							case 1:
-								controller.SendLocalizedMessage(_localizer,
-									"sa_admin_ban_message_time",
-									"",
-									player.PlayerName ?? string.Empty,
-									reason,
-									time);
-								break;
-							case 2:
-								controller.SendLocalizedMessage(_localizer,
-									"sa_admin_ban_message_time",
-									callerName,
-									player.PlayerName ?? string.Empty,
-									reason,
-									time);
-								break;
-						}
-					}
-				}
-			}
-		}
-		
-		if (player.UserId.HasValue)
-			AddTimer(Config.OtherSettings.KickTime, () =>
-			{
-				if (!player.IsValid || !player.UserId.HasValue) return;
-						
-				Helper.KickPlayer(player.UserId.Value, NetworkDisconnectionReason.NETWORK_DISCONNECT_KICKBANADDED);
-				
-			}, CounterStrikeSharp.API.Modules.Timers.TimerFlags.STOP_ON_MAPCHANGE);
+	    // Display center message to the player
+	    Helper.DisplayCenterMessage(player, messageKey, callerName, centerArgs);
+    
+	    // Display admin activity message if necessary
+	    if (caller == null || !SilentPlayers.Contains(caller.Slot))
+	    {
+		    Helper.ShowAdminActivity(activityMessageKey, callerName, adminActivityArgs);
+	    }
 
-		if (UnlockedCommands)
-			Server.ExecuteCommand($"banid 1 {new SteamID(player.SteamID).SteamId3}");
+	    // Schedule a kick timer
+	    if (player.UserId.HasValue)
+	    {
+	        AddTimer(Config.OtherSettings.KickTime, () =>
+	        {
+	            if (player is { IsValid: true, UserId: not null })
+	            {
+	                Helper.KickPlayer(player.UserId.Value, NetworkDisconnectionReason.NETWORK_DISCONNECT_KICKBANADDED);
+	            }
+	        }, CounterStrikeSharp.API.Modules.Timers.TimerFlags.STOP_ON_MAPCHANGE);
+	    }
 
-		Helper.LogCommand(caller, $"css_ban {(string.IsNullOrEmpty(player.PlayerName) ? player.SteamID.ToString() : player.PlayerName)} {time} {reason}");
-		Helper.SendDiscordPenaltyMessage(caller, player, reason, time, PenaltyType.Ban, _localizer);
+	    // Execute ban command if necessary
+	    if (UnlockedCommands)
+	    {
+	        Server.ExecuteCommand($"banid 1 {new SteamID(player.SteamID).SteamId3}");
+	    }
+
+	    if (!silent)
+	    {
+		    if (command == null)
+			    Helper.LogCommand(caller, $"css_ban {(string.IsNullOrEmpty(player.PlayerName) ? player.SteamID.ToString() : player.PlayerName)} {time} {reason}");
+		    else
+			    Helper.LogCommand(caller, command);
+	    }
+	    
+	    Helper.SendDiscordPenaltyMessage(caller, player, reason, time, PenaltyType.Ban, _localizer);
 	}
 
 	[ConsoleCommand("css_addban")]
@@ -189,172 +133,63 @@ public partial class CS2_SimpleAdmin
 	public void OnAddBanCommand(CCSPlayerController? caller, CommandInfo command)
 	{
 		if (Database == null) return;
-
-		var callerName = caller == null ? "Console" : caller.PlayerName;
-
-		if (command.ArgCount < 2)
-			return;
-		if (string.IsNullOrEmpty(command.GetArg(1))) return;
-
+		var callerName = caller?.PlayerName ?? "Console";
+		if (command.ArgCount < 2 || string.IsNullOrEmpty(command.GetArg(1))) return;
 		if (!Helper.ValidateSteamId(command.GetArg(1), out var steamId) || steamId == null)
 		{
-			command.ReplyToCommand($"Invalid SteamID64.");
+			command.ReplyToCommand("Invalid SteamID64.");
 			return;
 		}
 
 		var steamid = steamId.SteamId64.ToString();
-
-		var reason = _localizer?["sa_unknown"] ?? "Unknown";
+		var reason = command.ArgCount >= 3 && !string.IsNullOrEmpty(command.GetArg(3)) 
+			? command.GetArg(3) 
+			: _localizer?["sa_unknown"] ?? "Unknown";
 
 		int.TryParse(command.GetArg(2), out var time);
+		if (!CheckValidBan(caller, time)) return;
 
-		if (CheckValidBan(caller, time) == false)
-			return;
-
-		if (command.ArgCount >= 3 && command.GetArg(3).Length > 0)
-			reason = command.GetArg(3);
-
-		var adminInfo = caller != null && caller.UserId.HasValue ? PlayersInfo[caller.UserId.Value] : null;
+		var adminInfo = caller != null && caller.UserId.HasValue 
+			? PlayersInfo[caller.UserId.Value] 
+			: null;
 
 		var matches = Helper.GetPlayerFromSteamid64(steamid);
-		if (matches.Count == 1)
-		{
-			var player = matches.FirstOrDefault();
-			if (player != null && player.IsValid)
-			{
-				if (!caller!.CanTarget(player))
-				{
-					command.ReplyToCommand($"{player.PlayerName} is more powerful than you!");
-					return;
-				}
-				
-				if (time == 0)
-				{
-					if (player is { IsBot: false, IsHLTV: false })
-						using (new WithTemporaryCulture(player.GetLanguage()))
-						{
-							switch (Config.OtherSettings.ShowActivityType)
-							{
-								case 1:
-									player.PrintToCenter(_localizer!["sa_player_ban_message_perm", reason, caller == null ? "Console" : _localizer["sa_admin"]]);
-									break;
-								case 2:
-									player.PrintToCenter(_localizer!["sa_player_ban_message_perm", reason, caller == null ? "Console" : caller.PlayerName]);
-									break;
-							}
-						}
-					if (caller == null || !SilentPlayers.Contains(caller.Slot))
-					{
-						foreach (var controller in Helper.GetValidPlayers().Where(controller => controller is { IsValid: true, IsBot: false }))
-						{
-							if (_localizer != null)
-							{
-								switch (Instance.Config.OtherSettings.ShowActivityType)
-								{
-									case 1:
-										controller.SendLocalizedMessage(_localizer,
-											"sa_admin_ban_message_perm",
-											"",
-											player.PlayerName ?? string.Empty,
-											reason);
-										break;
-									case 2:
-										controller.SendLocalizedMessage(_localizer,
-											"sa_admin_ban_message_perm",
-											callerName,
-											player.PlayerName ?? string.Empty,
-											reason);
-										break;
-								}
-							}
-						}
-					}
-				}
-				else
-				{
-					if (player is { IsBot: false, IsHLTV: false })
-						using (new WithTemporaryCulture(player.GetLanguage()))
-						{
-							switch (Config.OtherSettings.ShowActivityType)
-							{
-								case 1:
-									player.PrintToCenter(_localizer!["sa_player_ban_message_time", reason, time, caller == null ? "Console" : _localizer["sa_admin"]]);
-									break;
-								case 2:
-									player.PrintToCenter(_localizer!["sa_player_ban_message_time", reason, time, caller == null ? "Console" : caller.PlayerName]);
-									break;
-							}
-						}
+		var player = matches.Count == 1 ? matches.FirstOrDefault() : null;
 
-					if (caller == null || !SilentPlayers.Contains(caller.Slot))
-					{
-						foreach (var controller in Helper.GetValidPlayers().Where(controller => controller is { IsValid: true, IsBot: false }))
-						{
-							if (_localizer != null)
-							{
-								switch (Instance.Config.OtherSettings.ShowActivityType)
-								{
-									case 1:
-										controller.SendLocalizedMessage(_localizer,
-											"sa_admin_ban_message_time",
-											"",
-											player.PlayerName ?? string.Empty,
-											reason,
-											time);
-										break;
-									case 2:
-										controller.SendLocalizedMessage(_localizer,
-											"sa_admin_ban_message_time",
-											callerName,
-											player.PlayerName ?? string.Empty,
-											reason,
-											time);
-										break;
-								}
-							}
-						}
-					}
-				}
-				
-				player.Pawn.Value?.Freeze();
-				if (player.UserId.HasValue)
-					AddTimer(Config.OtherSettings.KickTime, () =>
-					{
-						if (player is null || !player.IsValid || !player.UserId.HasValue) return;
-						
-						Helper.KickPlayer(player.UserId.Value, NetworkDisconnectionReason.NETWORK_DISCONNECT_KICKBANADDED);
-					}, CounterStrikeSharp.API.Modules.Timers.TimerFlags.STOP_ON_MAPCHANGE);
-			}
+		if (player != null && player.IsValid)
+		{
+			if (!caller.CanTarget(player))
+				return;
 			
-			Helper.SendDiscordPenaltyMessage(caller, player, reason, time, PenaltyType.Ban, _localizer);
+			Ban(caller, player, time, reason, callerName, silent: true);
+			//command.ReplyToCommand($"Banned player {player.PlayerName}.");
+		}
+		else
+		{
+			// Asynchronous ban operation if player is not online or not found
+			Task.Run(async () =>
+			{
+				var banManager = new BanManager(Database, Config);
+				await banManager.AddBanBySteamid(steamid, adminInfo, reason, time);
+			});
+
+			command.ReplyToCommand($"Player with steamid {steamid} is not online. Ban has been added offline.");
 		}
 
-		Task.Run(async () =>
-		{
-			BanManager banManager = new(Database, Config);
-			await banManager.AddBanBySteamid(steamid, adminInfo, reason, time);
-		});
-
 		Helper.LogCommand(caller, command);
-		//Helper.SendDiscordPenaltyMessage(caller, player, reason, time, Helper.PenaltyType.Ban, _discordWebhookClientPenalty, _localizer);
+
 		if (UnlockedCommands)
 			Server.ExecuteCommand($"banid 1 {steamId.SteamId3}");
-
-		command.ReplyToCommand($"Banned player with steamid {steamid}.");
 	}
 
 	[ConsoleCommand("css_banip")]
 	[RequiresPermissions("@css/ban")]
 	[CommandHelper(minArgs: 1, usage: "<ip> [time in minutes/0 perm] [reason]", whoCanExecute: CommandUsage.CLIENT_AND_SERVER)]
-	public void OnBanIp(CCSPlayerController? caller, CommandInfo command)
+	public void OnBanIpCommand(CCSPlayerController? caller, CommandInfo command)
 	{
 		if (Database == null) return;
-		var callerName = caller == null ? "Console" : caller.PlayerName;
-
-		if (command.ArgCount < 2)
-			return;
-		if (string.IsNullOrEmpty(command.GetArg(1))) return;
-
+		var callerName = caller?.PlayerName ?? "Console";
+		if (command.ArgCount < 2 || string.IsNullOrEmpty(command.GetArg(1))) return;
 		var ipAddress = command.GetArg(1);
 
 		if (!Helper.IsValidIp(ipAddress))
@@ -363,140 +198,40 @@ public partial class CS2_SimpleAdmin
 			return;
 		}
 
-		var reason = _localizer?["sa_unknown"] ?? "Unknown";
-
-		var adminInfo = caller != null && caller.UserId.HasValue ? PlayersInfo[caller.UserId.Value] : null;
+		var reason = command.ArgCount >= 3 && !string.IsNullOrEmpty(command.GetArg(3)) 
+			? command.GetArg(3) 
+			: _localizer?["sa_unknown"] ?? "Unknown";
 
 		int.TryParse(command.GetArg(2), out var time);
-		if (CheckValidBan(caller, time) == false)
-			return;
+		if (!CheckValidBan(caller, time)) return;
 
-		if (command.ArgCount >= 3 && command.GetArg(3).Length > 0)
-			reason = command.GetArg(3);
+		var adminInfo = caller != null && caller.UserId.HasValue 
+			? PlayersInfo[caller.UserId.Value] 
+			: null;
 
 		var matches = Helper.GetPlayerFromIp(ipAddress);
-		if (matches.Count == 1)
+		var player = matches.Count == 1 ? matches.FirstOrDefault() : null;
+
+		if (player != null && player.IsValid)
 		{
-			var player = matches.FirstOrDefault();
-			if (player != null && player.IsValid)
+			if (!caller.CanTarget(player))
+				return;
+			
+			Ban(caller, player, time, reason, callerName, silent: true);
+		}
+		else
+		{
+			// Asynchronous ban operation if player is not online or not found
+			Task.Run(async () =>
 			{
-				if (!caller!.CanTarget(player))
-				{
-					command.ReplyToCommand($"{player.PlayerName} is more powerful than you!");
-					return;
-				}
+				var banManager = new BanManager(Database, Config);
+				await banManager.AddBanByIp(ipAddress, adminInfo, reason, time);
+			});
 
-				player.Pawn.Value!.Freeze();
-
-				if (time == 0)
-				{
-					if (player is { IsBot: false, IsHLTV: false })
-						using (new WithTemporaryCulture(player.GetLanguage()))
-						{
-							switch (Config.OtherSettings.ShowActivityType)
-							{
-								case 1:
-									player.PrintToCenter(_localizer!["sa_player_ban_message_perm", reason, caller == null ? "Console" : _localizer["sa_admin"]]);
-									break;
-								case 2:
-									player.PrintToCenter(_localizer!["sa_player_ban_message_perm", reason, caller == null ? "Console" : caller.PlayerName]);
-									break;
-							}
-						}
-
-					if (caller == null || !SilentPlayers.Contains(caller.Slot))
-					{
-						foreach (var controller in Helper.GetValidPlayers().Where(controller => controller is { IsValid: true, IsBot: false }))
-						{
-							if (_localizer != null)
-							{
-								switch (Instance.Config.OtherSettings.ShowActivityType)
-								{
-									case 1:
-										controller.SendLocalizedMessage(_localizer,
-											"sa_admin_ban_message_perm",
-											"",
-											player.PlayerName ?? string.Empty,
-											reason);
-										break;
-									case 2:
-										controller.SendLocalizedMessage(_localizer,
-											"sa_admin_ban_message_perm",
-											callerName,
-											player.PlayerName ?? string.Empty,
-											reason);
-										break;
-								}
-							}
-						}
-					}
-				}
-				else
-				{
-					if (player is { IsBot: false, IsHLTV: false })
-						using (new WithTemporaryCulture(player.GetLanguage()))
-						{
-							switch (Config.OtherSettings.ShowActivityType)
-							{
-								case 1:
-									player.PrintToCenter(_localizer!["sa_player_ban_message_time", reason, time, caller == null ? "Console" : _localizer["sa_admin"]]);
-									break;
-								case 2:
-									player.PrintToCenter(_localizer!["sa_player_ban_message_time", reason, time, caller == null ? "Console" : caller.PlayerName]);
-									break;
-							}
-						}
-					if (caller == null || !SilentPlayers.Contains(caller.Slot))
-					{
-						foreach (var controller in Helper.GetValidPlayers().Where(controller => controller is { IsValid: true, IsBot: false }))
-						{
-							if (_localizer != null)
-							{
-								switch (Instance.Config.OtherSettings.ShowActivityType)
-								{
-									case 1:
-										controller.SendLocalizedMessage(_localizer,
-											"sa_admin_ban_message_time",
-											"",
-											player.PlayerName ?? string.Empty,
-											reason,
-											time);
-										break;
-									case 2:
-										controller.SendLocalizedMessage(_localizer,
-											"sa_admin_ban_message_time",
-											callerName,
-											player.PlayerName ?? string.Empty,
-											reason,
-											time);
-										break;
-								}
-							}
-						}
-					}
-				}
-
-				if (player.UserId.HasValue)
-					AddTimer(Config.OtherSettings.KickTime, () =>
-					{
-						if (player is null || !player.IsValid || !player.UserId.HasValue) return;
-						
-						Helper.KickPlayer(player.UserId.Value, NetworkDisconnectionReason.NETWORK_DISCONNECT_KICKBANADDED);
-					}, CounterStrikeSharp.API.Modules.Timers.TimerFlags.STOP_ON_MAPCHANGE);
-			}
-				
-			Helper.SendDiscordPenaltyMessage(caller, player, reason, time, PenaltyType.Ban, _localizer);
+			command.ReplyToCommand($"Player with ip {ipAddress} is not online. Ban has been added offline.");
 		}
 
-		Task.Run(async () =>
-		{
-			BanManager banManager = new(Database, Config);
-			await banManager.AddBanByIp(ipAddress, adminInfo, reason, time);
-		});
-
 		Helper.LogCommand(caller, command);
-
-		command.ReplyToCommand($"Banned player with IP address {ipAddress}.");
 	}
 
 	private bool CheckValidBan(CCSPlayerController? caller, int duration)
@@ -548,6 +283,8 @@ public partial class CS2_SimpleAdmin
 	[CommandHelper(minArgs: 1, usage: "<#userid or name> [time in minutes/0 perm] [reason]", whoCanExecute: CommandUsage.CLIENT_AND_SERVER)]
 	public void OnWarnCommand(CCSPlayerController? caller, CommandInfo command)
 	{
+		if (Database == null)
+			return;
 		var callerName = caller == null ? "Console" : caller.PlayerName;
 		if (command.ArgCount < 2)
 			return;
@@ -563,8 +300,7 @@ public partial class CS2_SimpleAdmin
 			return;
 		}
 
-		Database.Database database = new(DbConnectionString);
-		WarnManager warnManager = new(database);
+		WarnManager warnManager = new(Database);
 
 		int.TryParse(command.GetArg(2), out var time);
 
@@ -580,154 +316,79 @@ public partial class CS2_SimpleAdmin
 		});
 	}
 
-	internal void Warn(CCSPlayerController? caller, CCSPlayerController? player, int time, string reason, string? callerName = null, WarnManager? warnManager = null, CommandInfo? command = null)
-	{
-		if (Database == null || player is null || !player.IsValid || !player.UserId.HasValue) return;
-		if (!caller.CanTarget(player)) return;
+internal void Warn(CCSPlayerController? caller, CCSPlayerController player, int time, string reason, string? callerName = null, WarnManager? warnManager = null, CommandInfo? command = null)
+{
+    if (Database == null || player == null || !player.IsValid || !player.UserId.HasValue) return;
+    if (!caller.CanTarget(player)) return;
+    if (!CheckValidBan(caller, time)) return;
 
-		/*
-		if (CheckValidBan(caller, time) == false)
-			return;
-		*/
+    // Set default caller name if not provided
+    callerName ??= "Console";
 
-		callerName ??= caller == null ? "Console" : caller.PlayerName;
+    // Freeze player pawn if alive
+    if (player.PawnIsAlive)
+    {
+        player.Pawn.Value?.Freeze();
+    }
 
-		if (player.PawnIsAlive)
-		{
-			player.Pawn.Value?.Freeze();
+    // Get player and admin information
+    var playerInfo = PlayersInfo[player.UserId.Value];
+    var adminInfo = caller != null && caller.UserId.HasValue ? PlayersInfo[caller.UserId.Value] : null;
 
-			AddTimer(5.0f, () =>
-			{
-				if (player.IsValid)
-					player.Pawn.Value?.Unfreeze();
-			});
-		}
+    // Asynchronously handle warning logic
+    Task.Run(async () =>
+    {
+        warnManager ??= new WarnManager(Database);
+        await warnManager.WarnPlayer(playerInfo, adminInfo, reason, time);
 
-		var playerInfo = PlayersInfo[player.UserId.Value];
-		var adminInfo = caller != null && caller.UserId.HasValue ? PlayersInfo[caller.UserId.Value] : null;
+        // Check for warn thresholds and execute punish command if applicable
+        var totalWarns = await warnManager.GetPlayerWarnsCount(player.SteamID.ToString());
+        if (Config.WarnThreshold.Count > 0)
+        {
+            string? punishCommand = null;
+            var lastKey = Config.WarnThreshold.Keys.Max();
 
-		Task.Run(async () =>
-		{
-			warnManager ??= new WarnManager(Database);
-			await warnManager.WarnPlayer(playerInfo, adminInfo, reason, time);
-		});
+            if (totalWarns >= lastKey)
+                punishCommand = Config.WarnThreshold[lastKey];
+            else if (Config.WarnThreshold.TryGetValue(totalWarns, out var value))
+                punishCommand = value;
 
-		if (time == 0)
-		{
-			if (player is { IsBot: false })
-				using (new WithTemporaryCulture(player.GetLanguage()))
-				{
-					switch (Config.OtherSettings.ShowActivityType)
-					{
-						case 1:
-							player.PrintToCenter(_localizer!["sa_player_warn_message_perm", reason, caller == null ? "Console" : _localizer["sa_admin"]]);
-							break;
-						case 2:
-							player.PrintToCenter(_localizer!["sa_player_warn_message_perm", reason, caller == null ? "Console" : caller.PlayerName]);
-							break;
-					}
-				}
+            if (!string.IsNullOrEmpty(punishCommand))
+            {
+                await Server.NextFrameAsync(() =>
+                {
+                    Server.ExecuteCommand(punishCommand.Replace("USERID", playerInfo.UserId.ToString()).Replace("STEAMID64", playerInfo.SteamId?.ToString()));
+                });
+            }
+        }
+    });
 
-			if (caller == null || !SilentPlayers.Contains(caller.Slot))
-			{
-				foreach (var controller in Helper.GetValidPlayers().Where(controller => controller is { IsValid: true, IsBot: false }))
-				{
-					if (_localizer != null)
-					{
-						switch (Instance.Config.OtherSettings.ShowActivityType)
-						{
-							case 1:
-								controller.SendLocalizedMessage(_localizer,
-									"sa_admin_warn_message_perm",
-									"",
-									player.PlayerName ?? string.Empty,
-									reason);
-								break;
-							case 2:
-								controller.SendLocalizedMessage(_localizer,
-									"sa_admin_warn_message_perm",
-									callerName,
-									player.PlayerName ?? string.Empty,
-									reason);
-								break;
-						}
-					}
-				}
-			}
-		}
-		else
-		{
-			if (!player.IsBot)
-				using (new WithTemporaryCulture(player.GetLanguage()))
-				{
-					switch (Config.OtherSettings.ShowActivityType)
-					{
-						case 1:
-							player.PrintToCenter(_localizer!["sa_player_warn_message_time", reason, time, caller == null ? "Console" : _localizer["sa_admin"]]);
-							break;
-						case 2:
-							player.PrintToCenter(_localizer!["sa_player_warn_message_time", reason, time, caller == null ? "Console" : caller.PlayerName]);
-							break;
-					}
-				}
-			if (caller == null || !SilentPlayers.Contains(caller.Slot))
-			{
-				foreach (var controller in Helper.GetValidPlayers().Where(controller => controller is { IsValid: true, IsBot: false }))
-				{
-					if (_localizer != null)
-					{
-						switch (Instance.Config.OtherSettings.ShowActivityType)
-						{
-							case 1:
-								controller.SendLocalizedMessage(_localizer,
-									"sa_admin_warn_message_time",
-									"",
-									player.PlayerName ?? string.Empty,
-									reason,
-									time);
-								break;
-							case 2:
-								controller.SendLocalizedMessage(_localizer,
-									"sa_admin_warn_message_time",
-									callerName,
-									player.PlayerName ?? string.Empty,
-									reason,
-									time);
-								break;
-						}
-					}
-				}
-			}
-		}
+    // Determine message keys and arguments based on warning time
+    var (messageKey, activityMessageKey, centerArgs, adminActivityArgs) = time == 0
+        ? ("sa_player_warn_message_perm", "sa_admin_warn_message_perm",
+            new object[] { reason, callerName },
+            new object[] { callerName, player.PlayerName, reason })
+        : ("sa_player_warn_message_time", "sa_admin_warn_message_time",
+	        [reason, time, callerName],
+	        [callerName, player.PlayerName, reason, time]);
 
-		Task.Run(async () =>
-		{
-			if (warnManager == null) return;
-			var totalWarns = await warnManager.GetPlayerWarnsCount(player.SteamID.ToString());
+    // Display center message to the playser
+    Helper.DisplayCenterMessage(player, messageKey, callerName, centerArgs);
 
-			if (Config.WarnThreshold.Count != 0)
-			{
-				var punishCommand = string.Empty;
-				
-				var lastKey = Config.WarnThreshold.Keys.MaxBy(key => key);
+    // Display admin activity message if necessary
+    if (caller == null || !SilentPlayers.Contains(caller.Slot))
+    {
+        Helper.ShowAdminActivity(activityMessageKey, callerName, adminActivityArgs);
+    }
 
-				if (totalWarns >= lastKey)
-					punishCommand = Config.WarnThreshold[lastKey];
-				else if (Config.WarnThreshold.TryGetValue(totalWarns, out var value))
-					punishCommand = value;
+    // Log the warning command
+    if (command == null)
+        Helper.LogCommand(caller, $"css_warn {(string.IsNullOrEmpty(player.PlayerName) ? player.SteamID.ToString() : player.PlayerName)} {time} {reason}");
+    else
+        Helper.LogCommand(caller, command);
 
-				if (!string.IsNullOrEmpty(punishCommand))
-				{
-					await Server.NextFrameAsync(() =>
-					{
-						Server.PrintToChatAll(totalWarns.ToString());
-						Server.ExecuteCommand(punishCommand.Replace("USERID", playerInfo.UserId.ToString()).Replace("STEAMID64", playerInfo.SteamId?.ToString()));
-					});
-				}
-			}
-		});
+    // Send Discord notification for the warning
+    Helper.SendDiscordPenaltyMessage(caller, player, reason, time, PenaltyType.Warn, _localizer);
+}
 
-		Helper.LogCommand(caller, $"css_warn {(string.IsNullOrEmpty(player.PlayerName) ? player.SteamID.ToString() : player.PlayerName)} {time} {reason}");
-		Helper.SendDiscordPenaltyMessage(caller, player, reason, time, PenaltyType.Warn, _localizer);
-	}
 }

@@ -19,45 +19,6 @@ namespace CS2_SimpleAdmin
 {
 	public partial class CS2_SimpleAdmin
 	{
-		[ConsoleCommand("css_sa_upgrade")]
-		[CommandHelper(whoCanExecute: CommandUsage.SERVER_ONLY)]
-		public void OnSaUpgradeCommand(CCSPlayerController? caller, CommandInfo command)
-		{
-			if (caller != null || Database == null) return;
-
-			Task.Run(async () =>
-			{
-				try
-				{
-					await using var connection = await Database.GetConnectionAsync();
-					var commandText = "ALTER TABLE `sa_mutes` CHANGE `type` `type` ENUM('GAG','MUTE', 'SILENCE', '') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'GAG';";
-
-					await using var commandSql = connection.CreateCommand();
-					commandSql.CommandText = commandText;
-					await commandSql.ExecuteNonQueryAsync();
-
-					commandText = "ALTER TABLE `sa_servers` MODIFY COLUMN `hostname` varchar(128);";
-					await using var commandSql1 = connection.CreateCommand();
-					commandSql1.CommandText = commandText;
-					await commandSql1.ExecuteNonQueryAsync();
-
-					commandText = "ALTER TABLE `sa_bans` MODIFY `ends` TIMESTAMP NULL DEFAULT NULL;";
-					await using var commandSql2 = connection.CreateCommand();
-					commandSql2.CommandText = commandText;
-					await commandSql2.ExecuteNonQueryAsync();
-
-					await Server.NextFrameAsync(() =>
-					{
-						command.ReplyToCommand($"Successfully updated the database - {ModuleVersion}");
-					});
-				}
-				catch (Exception ex)
-				{
-					Logger.LogError(ex.Message);
-				}
-			});
-		}
-		
 		[ConsoleCommand("css_penalties")]
 		[ConsoleCommand("css_mypenalties")]
 		[ConsoleCommand("css_comms")]
@@ -182,19 +143,6 @@ namespace CS2_SimpleAdmin
 		[RequiresPermissions("@css/generic")]
 		public void OnAdminHelpCommand(CCSPlayerController? caller, CommandInfo command)
 		{
-			//if (caller == null ||!caller.IsValid) return;
-
-			/*
-			using (new WithTemporaryCulture(caller.GetLanguage()))
-			{
-				var splitMessage = _localizer!["sa_adminhelp"].ToString().Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
-
-				foreach (var line in splitMessage)
-				{
-					caller.PrintToChat(Helper.ReplaceTags($" {line}"));
-				}
-			} */
-
 			var lines = File.ReadAllLines(ModuleDirectory + "/admin_help.txt");
 
 			foreach (var line in lines)
@@ -687,68 +635,53 @@ namespace CS2_SimpleAdmin
 			});
 		}
 
-		public void Kick(CCSPlayerController? caller, CCSPlayerController? player, string? reason = "Unknown", string? callerName = null, CommandInfo? command = null)
+		public void Kick(CCSPlayerController? caller, CCSPlayerController player, string? reason = "Unknown", string? callerName = null, CommandInfo? command = null)
 		{
 			if (player == null || !player.IsValid) return;
 			if (!caller.CanTarget(player)) return;
 
-			callerName ??= caller == null ? "Console" : caller.PlayerName;
+			// Set default caller name if not provided
+			callerName ??= caller != null ? caller.PlayerName : "Console";
 			reason ??= _localizer?["sa_unknown"] ?? "Unknown";
 
-			player.Pawn.Value!.Freeze();
-
-			Helper.LogCommand(caller, $"css_kick {(string.IsNullOrEmpty(player.PlayerName) ? player.SteamID.ToString() : player.PlayerName)} {reason}");
-
-			if (string.IsNullOrEmpty(reason) == false)
+			// Freeze player pawn if alive
+			if (player.PawnIsAlive)
 			{
-				if (!player.IsBot)
-					using (new WithTemporaryCulture(player.GetLanguage()))
-					{
-						switch (Config.OtherSettings.ShowActivityType)
-						{
-							case 1:
-								player.PrintToCenter(_localizer!["sa_player_kick_message", reason, caller == null ? "Console" : _localizer["sa_admin"]]);
-								break;
-							case 2:
-								player.PrintToCenter(_localizer!["sa_player_kick_message", reason, caller == null ? "Console" : caller.PlayerName]);
-								break;
-						}
-					}
-				if (player.UserId.HasValue)
-					AddTimer(Config.OtherSettings.KickTime, () => Helper.KickPlayer(player.UserId.Value),
-						CounterStrikeSharp.API.Modules.Timers.TimerFlags.STOP_ON_MAPCHANGE);
-			}
-			else
-			{
-				if (player.UserId.HasValue)
-					AddTimer(Config.OtherSettings.KickTime, () => Helper.KickPlayer(player.UserId.Value),
-						CounterStrikeSharp.API.Modules.Timers.TimerFlags.STOP_ON_MAPCHANGE);
+				player.Pawn.Value?.Freeze();
 			}
 
-			if (caller != null && (caller.UserId == null || SilentPlayers.Contains(caller.Slot))) return;
-			foreach (var controller in Helper.GetValidPlayers().Where(controller => controller is { IsValid: true, IsBot: false }))
+			// Determine message keys and arguments for the kick notification
+			var (messageKey, activityMessageKey, centerArgs, adminActivityArgs) = 
+				("sa_player_kick_message", "sa_admin_kick_message",
+					new object[] { reason, callerName },
+					new object[] { callerName, player.PlayerName, reason });
+
+			// Display center message to the kicked player
+			Helper.DisplayCenterMessage(player, messageKey, callerName, centerArgs);
+
+			// Display admin activity message to other players
+			if (caller == null || !SilentPlayers.Contains(caller.Slot))
 			{
-				if (_localizer != null)
+				Helper.ShowAdminActivity(activityMessageKey, callerName, adminActivityArgs);
+			}
+
+			// Schedule the kick for the player
+			if (player.UserId.HasValue)
+			{
+				AddTimer(Config.OtherSettings.KickTime, () =>
 				{
-					switch (Instance.Config.OtherSettings.ShowActivityType)
+					if (player.IsValid)
 					{
-						case 1:
-							controller.SendLocalizedMessage(_localizer,
-								"sa_admin_kick_message",
-								"",
-								player?.PlayerName ?? string.Empty,
-								reason);
-							break;
-						case 2:
-							controller.SendLocalizedMessage(_localizer,
-								"sa_admin_kick_message",
-								callerName,
-								player?.PlayerName ?? string.Empty,
-								reason);
-							break;
+						Helper.KickPlayer(player.UserId.Value);
 					}
-				}
+				}, CounterStrikeSharp.API.Modules.Timers.TimerFlags.STOP_ON_MAPCHANGE);
 			}
+
+			// Log the command and send Discord notification
+			if (command == null)
+				Helper.LogCommand(caller, $"css_kick {(string.IsNullOrEmpty(player.PlayerName) ? player.SteamID.ToString() : player.PlayerName)} {reason}");
+			else
+				Helper.LogCommand(caller, command);
 		}
 
 		[ConsoleCommand("css_changemap")]
@@ -763,6 +696,7 @@ namespace CS2_SimpleAdmin
 
 		public void ChangeMap(CCSPlayerController? caller, string map, CommandInfo? command = null)
 		{
+			var callerName = caller != null ? caller.PlayerName : "Console";
 			map = map.ToLower();
 
 			if (map.StartsWith("ws:"))
@@ -796,31 +730,16 @@ namespace CS2_SimpleAdmin
 				}, CounterStrikeSharp.API.Modules.Timers.TimerFlags.STOP_ON_MAPCHANGE);
 			}
 
+			var (activityMessageKey, adminActivityArgs) = 
+				("sa_admin_changemap_message",
+					new object[] { callerName, map });
+
+			// Display admin activity message to other players
 			if (caller == null || !SilentPlayers.Contains(caller.Slot))
 			{
-				foreach (var player in Helper.GetValidPlayers())
-				{
-					if (_localizer != null)
-					{
-						switch (Instance.Config.OtherSettings.ShowActivityType)
-						{
-							case 1:
-								player.SendLocalizedMessage(_localizer,
-									"sa_admin_changemap_message",
-									"",
-									map);
-								break;
-							case 2:
-								player.SendLocalizedMessage(_localizer,
-									"sa_admin_changemap_message",
-									caller == null ? "Console" : caller.PlayerName,
-									map);
-								break;
-						}
-					}
-				}
+				Helper.ShowAdminActivity(activityMessageKey, callerName, adminActivityArgs);
 			}
-
+			
 			Helper.LogCommand(caller, command?.GetCommandString ?? $"css_map {map}");
 		}
 
@@ -838,39 +757,29 @@ namespace CS2_SimpleAdmin
 		public void ChangeWorkshopMap(CCSPlayerController? caller, string map, CommandInfo? command = null)
 		{
 			map = map.ToLower();
+			var callerName = caller != null ? caller.PlayerName : "Console";
 
-			var issuedCommand = long.TryParse(map, out var mapId) ? $"host_workshop_map {mapId}" : $"ds_workshop_changelevel {map}";
+			// Determine the workshop command
+			var issuedCommand = long.TryParse(map, out var mapId) 
+				? $"host_workshop_map {mapId}" 
+				: $"ds_workshop_changelevel {map}";
 
+			// Define the admin activity message and arguments
+			var activityMessageKey =  "sa_admin_changemap_message";
+
+			// Display admin activity message to other players
 			if (caller == null || !SilentPlayers.Contains(caller.Slot))
 			{
-				foreach (var player in Helper.GetValidPlayers())
-				{
-					if (_localizer != null)
-					{
-						switch (Instance.Config.OtherSettings.ShowActivityType)
-						{
-							case 1:
-								player.SendLocalizedMessage(_localizer,
-									"sa_admin_changemap_message",
-									"",
-									map);
-								break;
-							case 2:
-								player.SendLocalizedMessage(_localizer,
-									"sa_admin_changemap_message",
-									caller == null ? "Console" : caller.PlayerName,
-									map);
-								break;
-						}
-					}
-				}
+				Helper.ShowAdminActivity(activityMessageKey, callerName, [callerName, map]);
 			}
 
+			// Add timer to execute the map change command after a delay
 			AddTimer(3.0f, () =>
 			{
 				Server.ExecuteCommand(issuedCommand);
 			}, CounterStrikeSharp.API.Modules.Timers.TimerFlags.STOP_ON_MAPCHANGE);
 
+			// Log the command for the change
 			Helper.LogCommand(caller, command?.GetCommandString ?? $"css_wsmap {map}");
 		}
 

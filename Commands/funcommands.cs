@@ -24,41 +24,41 @@ public partial class CS2_SimpleAdmin
 		{
 			if (caller!.CanTarget(player))
 			{
-				NoClip(caller, player, callerName);
+                NoClip(caller, player, callerName);
 			}
 		});
 	}
 
-	public void NoClip(CCSPlayerController? caller, CCSPlayerController? player, string? callerName = null)
+	internal static void NoClip(CCSPlayerController? caller, CCSPlayerController player, string? callerName = null, CommandInfo? command = null)
 	{
+		if (!player.IsValid) return;
 		if (!caller.CanTarget(player)) return;
 
-		callerName ??= caller == null ? "Console" : caller.PlayerName;
-		player!.Pawn.Value!.ToggleNoclip();
+		// Set default caller name if not provided
+		callerName ??= caller != null ? caller.PlayerName : "Console";
 
-		Helper.LogCommand(caller, $"css_noclip {player.PlayerName}");
+		// Toggle no-clip mode for the player
+		player.Pawn.Value?.ToggleNoclip();
 
-		if (caller != null && SilentPlayers.Contains(caller.Slot)) return;
-		foreach (var controller in Helper.GetValidPlayers().Where(controller => controller is { IsValid: true, IsBot: false }))
+		// Determine message keys and arguments for the no-clip notification
+		var (activityMessageKey, adminActivityArgs) =
+			("sa_admin_noclip_message",
+				new object[] { callerName, player.PlayerName });
+
+		// Display admin activity message to other players
+		if (caller == null || !SilentPlayers.Contains(caller.Slot))
 		{
-			if (_localizer != null)
-			{
-				switch (Instance.Config.OtherSettings.ShowActivityType)
-				{
-					case 1:
-						controller.SendLocalizedMessage(_localizer,
-							"sa_admin_noclip_message",
-							"",
-							player.PlayerName);
-						break;
-					case 2:
-						controller.SendLocalizedMessage(_localizer,
-							"sa_admin_noclip_message",
-							callerName,
-							player.PlayerName);
-						break;
-				}
-			}
+			Helper.ShowAdminActivity(activityMessageKey, callerName, adminActivityArgs);
+		}
+
+		// Log the command
+		if (command == null)
+		{
+			Helper.LogCommand(caller, $"css_noclip {(string.IsNullOrEmpty(player.PlayerName) ? player.SteamID.ToString() : player.PlayerName)}");
+		}
+		else
+		{
+			Helper.LogCommand(caller, command);
 		}
 	}
 
@@ -78,46 +78,44 @@ public partial class CS2_SimpleAdmin
 		{
 			if (caller!.CanTarget(player))
 			{
-				Freeze(caller, player, time, callerName);
+				Freeze(caller, player, time, callerName, command);
 			}
 		});
 	}
 
-	public void Freeze(CCSPlayerController? caller, CCSPlayerController? player, int time, string? callerName = null)
+	internal static void Freeze(CCSPlayerController? caller, CCSPlayerController player, int time, string? callerName = null, CommandInfo? command = null)
 	{
+		if (!player.IsValid) return;
 		if (!caller.CanTarget(player)) return;
 
-		callerName ??= caller == null ? "Console" : caller.PlayerName;
+		// Set default caller name if not provided
+		callerName ??= caller != null ? caller.PlayerName : "Console";
 
-		player?.Pawn.Value!.Freeze();
+		// Freeze player pawn
+		player.Pawn.Value?.Freeze();
 
-		Helper.LogCommand(caller, $"css_freeze {player?.PlayerName}");
+		// Determine message keys and arguments for the freeze notification
+		var (activityMessageKey, adminActivityArgs) = 
+			("sa_admin_freeze_message", 
+				new object[] { callerName, player.PlayerName });
 
-		if (time > 0)
-			AddTimer(time, () => player?.Pawn.Value!.Unfreeze(), CounterStrikeSharp.API.Modules.Timers.TimerFlags.STOP_ON_MAPCHANGE);
-
-		if (caller != null && SilentPlayers.Contains(caller.Slot)) return;
-		foreach (var controller in Helper.GetValidPlayers().Where(controller => controller is { IsValid: true, IsBot: false }))
+		// Display admin activity message to other players
+		if (caller == null || !SilentPlayers.Contains(caller.Slot))
 		{
-			if (_localizer != null)
-			{
-				switch (Instance.Config.OtherSettings.ShowActivityType)
-				{
-					case 1:
-						controller.SendLocalizedMessage(_localizer,
-							"sa_admin_freeze_message",
-							"",
-							player?.PlayerName ?? string.Empty);
-						break;
-					case 2:
-						controller.SendLocalizedMessage(_localizer,
-							"sa_admin_freeze_message",
-							callerName,
-							player?.PlayerName ?? string.Empty);
-						break;
-				}
-			}
+			Helper.ShowAdminActivity(activityMessageKey, callerName, adminActivityArgs);
 		}
+
+		// Schedule unfreeze for the player if time is specified
+		if (time > 0)
+		{
+			Instance.AddTimer(time, () => player.Pawn.Value?.Unfreeze(), CounterStrikeSharp.API.Modules.Timers.TimerFlags.STOP_ON_MAPCHANGE);
+		}
+
+		// Log the command and send Discord notification
+		if (command == null)
+			Helper.LogCommand(caller, $"css_freeze {(string.IsNullOrEmpty(player.PlayerName) ? player.SteamID.ToString() : player.PlayerName)} {time}");
+		else
+			Helper.LogCommand(caller, command);
 	}
 
 	[ConsoleCommand("css_unfreeze", "Unfreeze a player.")]
@@ -139,35 +137,30 @@ public partial class CS2_SimpleAdmin
 
 	public void Unfreeze(CCSPlayerController? caller, CCSPlayerController player, string? callerName = null, CommandInfo? command = null)
 	{
+		if (!player.IsValid) return;
 		if (!caller.CanTarget(player)) return;
 
-		callerName ??= caller == null ? "Console" : caller.PlayerName;
+		// Set default caller name if not provided
+		callerName ??= caller != null ? caller.PlayerName : "Console";
 
-		player.Pawn.Value!.Unfreeze();
+		// Unfreeze player pawn
+		player.Pawn.Value?.Unfreeze();
 
-		Helper.LogCommand(caller, $"css_unfreeze {player.PlayerName}");
+		// Determine message keys and arguments for the unfreeze notification
+		var (activityMessageKey, adminActivityArgs) = 
+			("sa_admin_unfreeze_message", 
+				new object[] { callerName, player.PlayerName });
 
-		if (caller != null && SilentPlayers.Contains(caller.Slot)) return;
-		foreach (var controller in Helper.GetValidPlayers().Where(controller => controller is { IsValid: true, IsBot: false }))
+		// Display admin activity message to other players
+		if (caller == null || !SilentPlayers.Contains(caller.Slot))
 		{
-			if (_localizer != null)
-			{
-				switch (Instance.Config.OtherSettings.ShowActivityType)
-				{
-					case 1:
-						controller.SendLocalizedMessage(_localizer,
-							"sa_admin_unfreeze_message",
-							"",
-							player?.PlayerName ?? string.Empty);
-						break;
-					case 2:
-						controller.SendLocalizedMessage(_localizer,
-							"sa_admin_unfreeze_message",
-							callerName,
-							player?.PlayerName ?? string.Empty);
-						break;
-				}
-			}
+			Helper.ShowAdminActivity(activityMessageKey, callerName, adminActivityArgs);
 		}
+
+		// Log the command and send Discord notification
+		if (command == null)
+			Helper.LogCommand(caller, $"css_unfreeze {(string.IsNullOrEmpty(player.PlayerName) ? player.SteamID.ToString() : player.PlayerName)}");
+		else
+			Helper.LogCommand(caller, command);
 	}
 }

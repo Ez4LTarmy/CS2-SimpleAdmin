@@ -26,11 +26,10 @@ namespace CS2_SimpleAdmin
 			foreach (var player in Helper.GetValidPlayers()
 						 .Where(p => AdminManager.PlayerHasPermissions(p, "@css/chat")))
 			{
-				if (_localizer != null)
-					player.SendLocalizedMessage(_localizer,
-										"sa_adminchat_template_admin",
-										caller == null ? "Console" : caller.PlayerName,
-										utf8String);
+				player.SendLocalizedMessage(_localizer,
+									"sa_adminchat_template_admin",
+									caller == null ? "Console" : caller.PlayerName,
+									utf8String);
 			}
 		}
 		
@@ -66,10 +65,9 @@ namespace CS2_SimpleAdmin
 
 			foreach (var player in Helper.GetValidPlayers())
 			{
-				if (_localizer != null)
-					player.SendLocalizedMessage(_localizer,
-										"sa_adminsay_prefix",
-										utf8String.ReplaceColorTags());
+				player.SendLocalizedMessage(_localizer,
+									"sa_adminsay_prefix",
+									utf8String.ReplaceColorTags());
 			}
 		}
 

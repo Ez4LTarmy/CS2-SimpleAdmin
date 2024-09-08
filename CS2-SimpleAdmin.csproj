@@ -32,4 +32,10 @@
     <None Update="admin_help.txt" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   
+  <ItemGroup>
+    <Reference Include="WASDSharedAPI">
+      <HintPath>3rd_party\WASDSharedAPI.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  
 </Project>

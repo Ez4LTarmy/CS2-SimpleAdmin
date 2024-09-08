@@ -1,4 +1,5 @@
 ﻿using CounterStrikeSharp.API.Modules.Entities;
+using CounterStrikeSharp.API.Modules.Utils;
 
 namespace CS2_SimpleAdmin.Models;
 
@@ -24,4 +25,11 @@ public class PlayerInfo(
 	public int TotalGags { get; set; } = totalGags;
 	public int TotalSilences { get; set; } = totalSilences;
 	public int TotalWarns { get; set; } = totalWarns;
+	public DiePosition? DiePosition { get; set; }
+}
+
+public class DiePosition(Vector? position = null, QAngle? angle = null)
+{
+	public Vector? Position { get; set; } = position;
+	public QAngle? Angle { get; set; } = angle;
 }

@@ -14,10 +14,10 @@ public class PlayerManager
 {
 	private readonly CS2_SimpleAdminConfig _config = CS2_SimpleAdmin.Instance.Config;
 
-    public void LoadPlayerData(CCSPlayerController? player)
+    public void LoadPlayerData(CCSPlayerController player)
     {
-	    if (player == null || string.IsNullOrEmpty(player.IpAddress) || player.IpAddress.Contains("127.0.0.1")
-	        || player.IsBot || !player.UserId.HasValue)
+	    if (player.IsBot || string.IsNullOrEmpty(player.IpAddress) || player.IpAddress.Contains("127.0.0.1")
+	                                               ||  !player.UserId.HasValue)
 		    return;
 
         var ipAddress = player.IpAddress?.Split(":")[0];
@@ -291,7 +291,6 @@ public class PlayerManager
 
 						if (_config.OtherSettings.TimeMode == 0)
 						{
-							Console.WriteLine("checkOnlineModeMutes");
 							await muteManager.CheckOnlineModeMutes(onlinePlayers);
 						}
 					}
@@ -300,7 +299,6 @@ public class PlayerManager
 						CS2_SimpleAdmin._logger?.LogError("Unable to check bans for online players");
 					}
 				}
-
 
 				await Server.NextFrameAsync(() =>
 				{

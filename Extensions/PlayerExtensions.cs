@@ -155,14 +155,12 @@ public static class PlayerExtensions
 
 	public static void TeleportPlayer(this CCSPlayerController? controller, CCSPlayerController? target)
 	{
-		if (controller?.PlayerPawn?.Value == null && target!.PlayerPawn?.Value == null)
+		if (controller?.PlayerPawn.Value == null && target?.PlayerPawn.Value == null)
 			return;
 
 		if (
-			controller?.PlayerPawn?.Value?.AbsOrigin != null &&
-			controller?.PlayerPawn?.Value?.AbsRotation != null &&
-			target?.PlayerPawn?.Value?.AbsOrigin != null &&
-			target?.PlayerPawn?.Value?.AbsRotation != null
+			controller?.PlayerPawn.Value is { AbsOrigin: not null, AbsRotation: not null } &&
+			target?.PlayerPawn.Value is { AbsOrigin: not null, AbsRotation: not null }
 		)
 		{
 			controller.PlayerPawn.Value.Teleport(

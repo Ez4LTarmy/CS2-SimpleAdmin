@@ -74,15 +74,6 @@ public partial class CS2_SimpleAdmin : BasePlugin, IPluginConfig<CS2_SimpleAdmin
 		_cBasePlayerControllerSetPawnFunc = new MemoryFunctionVoid<CBasePlayerController, CCSPlayerPawn, bool, bool>(GameData.GetSignature("CBasePlayerController_SetPawn"));
 	}
 
-	public override void Unload(bool hotReload)
-	{
-		if (hotReload) return;
-
-		RemoveListener<Listeners.OnMapStart>(OnMapStart);
-		RemoveCommandListener("say", OnCommandSay, HookMode.Post);
-		RemoveCommandListener("say_team", OnCommandTeamSay, HookMode.Post);
-	}
-
 	public override void OnAllPluginsLoaded(bool hotReload)
 	{
 		AddTimer(3.0f, () => ReloadAdmins(null));

@@ -33,7 +33,7 @@ public partial class CS2_SimpleAdmin
 	[GameEventHandler]
 	public HookResult OnClientDisconnect(EventPlayerDisconnect @event, GameEventInfo info)
 	{
-		CCSPlayerController? player = @event.Userid;
+		var player = @event.Userid;
 
 #if DEBUG
         Logger.LogCritical("[OnClientDisconnect] Before");
@@ -84,8 +84,11 @@ public partial class CS2_SimpleAdmin
 	[GameEventHandler]
 	public HookResult OnPlayerFullConnect(EventPlayerConnectFull @event, GameEventInfo info)
 	{
-		CCSPlayerController? player = @event.Userid;
+		var player = @event.Userid;
 
+		if (player == null || !player.IsValid || player.IsBot)
+			return HookResult.Continue;
+		
 		new PlayerManager().LoadPlayerData(player);
 		
 		return HookResult.Continue;
@@ -99,6 +102,10 @@ public partial class CS2_SimpleAdmin
 #endif
 
 		GodPlayers.Clear();
+		foreach (var player in PlayersInfo.Values)
+		{
+			player.DiePosition = null;
+		}
 
 		AddTimer(0.41f, () =>
 		{
@@ -121,7 +128,7 @@ public partial class CS2_SimpleAdmin
 
 	public HookResult OnCommandSay(CCSPlayerController? player, CommandInfo info)
 	{
-		if (player is null || !player.IsValid || player.IsBot)
+		if (player == null ||  !player.IsValid || player.IsBot)
 			return HookResult.Continue;
 
 		if (info.GetArg(1).StartsWith($"/")
@@ -139,7 +146,7 @@ public partial class CS2_SimpleAdmin
 
 	public HookResult OnCommandTeamSay(CCSPlayerController? player, CommandInfo info)
 	{
-		if (player is null || !player.IsValid || player.IsBot)
+		if (player == null || !player.IsValid || player.IsBot)
 			return HookResult.Continue;
 
 		if (info.GetArg(1).StartsWith($"/")
@@ -204,7 +211,7 @@ public partial class CS2_SimpleAdmin
 	[GameEventHandler]
 	public HookResult OnPlayerHurt(EventPlayerHurt @event, GameEventInfo info)
 	{
-		CCSPlayerController? player = @event.Userid;
+		var player = @event.Userid;
 
 		if (player is null || @event.Attacker is null || !player.PawnIsAlive || player.PlayerPawn.Value == null)
 			return HookResult.Continue;
@@ -214,6 +221,24 @@ public partial class CS2_SimpleAdmin
 		player.PlayerPawn.Value.Health = player.PlayerPawn.Value.MaxHealth;
 		player.PlayerPawn.Value.ArmorValue = 100;
 
+		return HookResult.Continue;
+	}
+
+	[GameEventHandler]
+	public HookResult OnPlayerDeath(EventPlayerDeath @event, GameEventInfo info)
+	{
+		var player = @event.Userid;
+
+		if (player?.UserId == null || player.IsBot || player.Connected != PlayerConnectedState.PlayerConnected)
+			return HookResult.Continue;
+		
+		PlayersInfo[player.UserId.Value].DiePosition =
+			new DiePosition(
+				new Vector(player.PlayerPawn.Value?.AbsOrigin?.X, player.PlayerPawn.Value?.AbsOrigin?.Y,
+					player.PlayerPawn.Value?.AbsOrigin?.Z),
+				new QAngle(player.PlayerPawn.Value?.AbsRotation?.X, player.PlayerPawn.Value?.AbsRotation?.Y,
+					player.PlayerPawn.Value?.AbsRotation?.Z));
+		
 		return HookResult.Continue;
 	}
 

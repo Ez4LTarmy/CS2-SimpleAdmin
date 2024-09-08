@@ -17,6 +17,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using CounterStrikeSharp.API.Core.Translations;
 using CounterStrikeSharp.API.ValveConstants.Protobuf;
 using CS2_SimpleAdmin.Enums;
 using Color = Discord.Color;
@@ -269,7 +270,68 @@ internal static class Helper
 
 		}
 	}*/
+	
+	public static void ShowAdminActivity(string messageKey, string? callerName = null, params object[] messageArgs)
+	{
+		if (CS2_SimpleAdmin._localizer == null) return;
+
+		// Determine the localized message key
+		var localizedMessageKey = $"{messageKey}";
+
+		var formattedMessageArgs = messageArgs.Select(arg => arg?.ToString() ?? string.Empty).ToArray();
+
+		// Replace placeholder based on showActivityType
+		for (var i = 0; i < formattedMessageArgs.Length; i++)
+		{
+			var arg = formattedMessageArgs[i]; // Convert argument to string if not null
+			// Replace "CALLER" placeholder in the argument string
+			formattedMessageArgs[i] = CS2_SimpleAdmin.Instance.Config.OtherSettings.ShowActivityType switch
+			{
+				1 => arg.Replace("CALLER", CS2_SimpleAdmin._localizer["sa_admin"]),
+				2 => arg.Replace("CALLER", callerName ?? "Console"),
+				_ => arg
+			};
+		}
 		
+		foreach (var controller in Helper.GetValidPlayers().Where(c => c is { IsValid: true, IsBot: false }))
+		{
+			// Send the localized message to each player
+			controller.SendLocalizedMessage(CS2_SimpleAdmin._localizer, localizedMessageKey, formattedMessageArgs.Cast<object>().ToArray());
+		}
+	}
+	
+	public static void DisplayCenterMessage(
+		CCSPlayerController player, 
+		string messageKey, 
+		string? callerName = null, 
+		params object[] messageArgs)
+	{
+		if (CS2_SimpleAdmin._localizer == null) return;
+
+		// Determine the localized message key
+		var localizedMessageKey = $"{messageKey}";
+
+		var formattedMessageArgs = messageArgs.Select(arg => arg?.ToString() ?? string.Empty).ToArray();
+
+		// Replace placeholder based on showActivityType
+		for (var i = 0; i < formattedMessageArgs.Length; i++)
+		{
+			var arg = formattedMessageArgs[i]; // Convert argument to string if not null
+			// Replace "CALLER" placeholder in the argument string
+			formattedMessageArgs[i] = CS2_SimpleAdmin.Instance.Config.OtherSettings.ShowActivityType switch
+			{
+				1 => arg.Replace("CALLER", CS2_SimpleAdmin._localizer["sa_admin"]),
+				2 => arg.Replace("CALLER", callerName ?? "Console"),
+				_ => arg
+			};
+		}
+
+		// Print the localized message to the center of the screen for the player
+		using (new WithTemporaryCulture(player.GetLanguage()))
+		{
+			player.PrintToCenter(CS2_SimpleAdmin._localizer[localizedMessageKey, formattedMessageArgs.Cast<object>().ToArray()]);
+		}
+	}
 
 	private static string ConvertMinutesToTime(int minutes)
 	{
