@@ -226,7 +226,8 @@ public class PlayerManager
 				await Server.NextFrameAsync(() =>
 				{
 					foreach (var admin in Helper.GetValidPlayers()
-						         .Where(p => AdminManager.PlayerHasPermissions(p, "@css/kick") &&
+						         .Where(p => (AdminManager.PlayerHasPermissions(p, "@css/kick") || 
+						                      AdminManager.PlayerHasPermissions(p, "@css/ban")) &&
 						                     p.Connected == PlayerConnectedState.PlayerConnected))
 					{
 						if (CS2_SimpleAdmin._localizer != null && admin != player)

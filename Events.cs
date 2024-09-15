@@ -7,7 +7,6 @@ using Microsoft.Extensions.Logging;
 using System.Text;
 using CounterStrikeSharp.API.Modules.Entities;
 using CounterStrikeSharp.API.Modules.Utils;
-using CounterStrikeSharp.API.ValveConstants.Protobuf;
 using CS2_SimpleAdmin.Enums;
 using CS2_SimpleAdmin.Managers;
 using CS2_SimpleAdmin.Models;
