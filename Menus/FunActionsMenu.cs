@@ -98,10 +98,10 @@ public static class FunActionsMenu
 		foreach (var menuOptionData in options)
 		{
 			var menuName = menuOptionData.Name;
-			menu.AddMenuOption(menuName, (_, _) => { menuOptionData.Action(); }, menuOptionData.Disabled);
+			menu?.AddMenuOption(menuName, (_, _) => { menuOptionData.Action(); }, menuOptionData.Disabled);
 		}
 
-		AdminMenu.OpenMenu(admin, menu);
+		if (menu != null) AdminMenu.OpenMenu(admin, menu);
 	}
 
 	private static void GodMode(CCSPlayerController admin, CCSPlayerController player)
@@ -125,10 +125,10 @@ public static class FunActionsMenu
 
 		foreach (var weapon in GetWeaponsCache)
 		{
-			menu.AddMenuOption(weapon.Value.ToString(), (_, _) => { GiveWeapon(admin, player, weapon.Value); });
+			menu?.AddMenuOption(weapon.Value.ToString(), (_, _) => { GiveWeapon(admin, player, weapon.Value); });
 		}
 
-		AdminMenu.OpenMenu(admin, menu);
+		if (menu != null) AdminMenu.OpenMenu(admin, menu);
 	}
 
 	private static void GiveWeapon(CCSPlayerController admin, CCSPlayerController player, CsItem weaponValue)
@@ -170,10 +170,10 @@ public static class FunActionsMenu
 
 		foreach (var (optionName, value) in hpArray)
 		{
-			menu.AddMenuOption(optionName, (_, _) => { SetHp(admin, player, value); });
+			menu?.AddMenuOption(optionName, (_, _) => { SetHp(admin, player, value); });
 		}
 
-		AdminMenu.OpenMenu(admin, menu);
+		if (menu != null) AdminMenu.OpenMenu(admin, menu);
 	}
 
 	private static void SetHp(CCSPlayerController admin, CCSPlayerController player, int hp)
@@ -199,10 +199,10 @@ public static class FunActionsMenu
 
 		foreach (var (optionName, value) in speedArray)
 		{
-			menu.AddMenuOption(optionName, (_, _) => { SetSpeed(admin, player, value); });
+			menu?.AddMenuOption(optionName, (_, _) => { SetSpeed(admin, player, value); });
 		}
 
-		AdminMenu.OpenMenu(admin, menu);
+		if (menu != null) AdminMenu.OpenMenu(admin, menu);
 	}
 
 	private static void SetSpeed(CCSPlayerController admin, CCSPlayerController player, float speed)
@@ -226,10 +226,10 @@ public static class FunActionsMenu
 
 		foreach (var (optionName, value) in gravityArray)
 		{
-			menu.AddMenuOption(optionName, (_, _) => { SetGravity(admin, player, value); });
+			menu?.AddMenuOption(optionName, (_, _) => { SetGravity(admin, player, value); });
 		}
 
-		AdminMenu.OpenMenu(admin, menu);
+		if (menu != null) AdminMenu.OpenMenu(admin, menu);
 	}
 
 	private static void SetGravity(CCSPlayerController admin, CCSPlayerController player, float gravity)
@@ -253,10 +253,10 @@ public static class FunActionsMenu
 
 		foreach (var (optionName, value) in moneyArray)
 		{
-			menu.AddMenuOption(optionName, (_, _) => { SetMoney(admin, player, value); });
+			menu?.AddMenuOption(optionName, (_, _) => { SetMoney(admin, player, value); });
 		}
 
-		AdminMenu.OpenMenu(admin, menu);
+		if (menu != null) AdminMenu.OpenMenu(admin, menu);
 	}
 
 	private static void SetMoney(CCSPlayerController admin, CCSPlayerController player, int money)

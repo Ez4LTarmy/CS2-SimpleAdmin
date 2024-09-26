@@ -1,101 +1,48 @@
 # CS2-SimpleAdmin
 
-### Do you appreciate what I do? Buy me a cup of tea ❤️
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/Y8Y4THKXG)
 
-### Description
-Manage your Counter-Strike 2 server by simple commands :) 
+> **Manage your Counter-Strike 2 server with simple commands!**  
+> CS2-SimpleAdmin is a plugin designed to help you easily manage your Counter-Strike 2 server with user-friendly commands. Whether you're banning players, managing teams, or configuring server settings, CS2-SimpleAdmin has you covered.
 
-### Info
-~~It's only plugin base~~, I don't have much time for more extensive development, so if you want to help, do it :)
-**The plugin will be developed as much as possible**, so it is no longer just a base for other plugins
+## 📜 Features
+- **Simple Commands**: Manage your server with an easy-to-use command system.
+- **MySQL Integration**: Store and retrieve player data seamlessly with MySQL.
+- **Ongoing Development**: New features and improvements are added whenever possible.
 
-### Commands
-```js
-- css_addadmin <steamid> <name> <flags/groups> <immunity> [time in minutes] - Add admin by steamid // @css/root
-- css_deladmin <steamid> - Delete admin by steamid // @css/root
-- css_reloadadmins - Reload sql admins // @css/root
-- css_hide - Hide admin on scoreboard and commands action // @css/kick
-- css_admin - Display all admin commands // @css/generic
-- css_who <#userid or name>  - Display informations about player // @css/generic
-- css_players - Display player list // @css/generic
-- css_ban <#userid or name> [time in minutes/0 perm] [reason] - Ban player // @css/ban
-- css_addban <steamid> [time in minutes/0 perm] [reason] - Ban player via steamid64 // @css/ban
-- css_banip <ip> [time in minutes/0 perm] [reason] - Ban player via IP address // @css/ban
-- css_unban <steamid or name or ip> - Unban player // @css/unban
-- css_kick <#userid or name> [reason] - Kick player / @css/kick
-- css_gag <#userid or name> [time in minutes/0 perm] [reason] - Gag player // @css/chat
-- css_addgag <steamid> [time in minutes/0 perm] [reason] - Gag player via steamid64 // @css/chat
-- css_ungag <steamid or name> - Ungag player // @css/chat
-- css_mute <#userid or name> [time in minutes/0 perm] [reason] - Mute player // @css/chat
-- css_addmute <steamid> [time in minutes/0 perm] [reason] - Mute player via steamid64 // @css/chat
-- css_unmute <steamid or name> - Unmute player // @css/chat
-- css_silence <#userid or name> [time in minutes/0 perm] [reason] - Silence player // @css/chat
-- css_addsilence <steamid> [time in minutes/0 perm] [reason] - Silence player via steamid64 // @css/chat
-- css_unsilence <steamid or name> - Unsilence player // @css/chat
-- css_give <#userid or name> <weapon> - Give weapon to player // @css/cheats
-- css_strip <#userid or name> - Takes all of the player weapons // @css/slay
-- css_hp <#userid or name> [health] - Set player health // @css/slay
-- css_speed <#userid or name> [speed] - Set player speed // @css/slay
-- css_god <#userid or name> - Toggle godmode for player // @css/cheats
-- css_slay <#userid or name> - Kill player // @css/slay
-- css_slap <#userid or name> [damage] - Slap player // @css/slay
-- css_team <#userid or name> [<ct/tt/spec/swap>] [-k] - Change player team (swap - swap player team, -k - kill player) // @css/kick
-- css_vote <"Question?"> ["Answer1"] ["Answer2"] ... - Create vote // @css/generic
-- css_map <mapname> - Change map // @css/changemap
-- css_wsmap <name or id> - Change workshop map // @css/changemap
-- css_asay <message> - Say message to all admins // @css/chat
-- css_say <message> - Say message as admin in chat // @css/chat
-- css_psay <#userid or name> <message> - Sends private message to player // @css/chat
-- css_csay <message> - Say message as admin in center // @css/chat
-- css_hsay <message> - Say message as admin in hud // @css/chat
-- css_noclip <#userid or name> - Toggle noclip for player // @css/cheats
-- css_freeze <#userid or name> [duration] - Freeze player // @css/slay
-- css_unfreeze <#userid or name> - Unfreeze player // @css/slay
-- css_rename <#userid or name> <new name> - Rename player // @css/kick
-- css_prename <#userid or name> <new name> - Permanently rename player (until the server restarts - don't set new name to remove perm rename) // @css/ban
-- css_respawn <#userid or name> - Respawn player // @css/cheats
-- css_cvar <cvar> <value> - Change cvar value // @css/cvar
-- css_rcon <command> - Run command as server // @css/rcon
-- css_give <#userid or name> <WeaponName> - Gives a weapon to a Player // @css/give
+## ⚙️ Requirements
+- [CounterStrikeSharp](https://github.com/roflmuffin/CounterStrikeSharp)  
+- [PlayerSettings](https://github.com/NickFox007/PlayerSettingsCS2)
+- [MenuManagerCS2](https://github.com/NickFox007/MenuManagerCS2)
+- MySQL database
 
-- team_chat @Message - Say message to all admins // @css/chat
-```
+## 🚀 Getting Started
+1. **Clone or Download the Repository**:  
+   Download or clone the repository and publish to your `addons/counterstrikesharp/plugins/` directory.
 
-### Requirements
-- [CounterStrikeSharp](https://github.com/roflmuffin/CounterStrikeSharp/) **tested on 228**
-- MySQL **tested on MySQL (MariaDB) Server version: 10.11.4-MariaDB-1~deb12u1 Debian 12**
+2. **First Launch Configuration**:  
+   On the first launch, a configuration file will be generated at:
+   ```
+   addons/counterstrikesharp/configs/plugins/CS2-SimpleAdmin/CS2-SimpleAdmin.json
+   ```
+   Edit this file to customize the plugin settings according to your server needs.
 
+3. **Enjoy Managing Your Server!**  
+   Use the commands provided by the plugin to easily manage your server.
 
-### Configuration
-After first launch, u need to configure plugin in  addons/counterstrikesharp/configs/plugins/CS2-SimpleAdmin/CS2-SimpleAdmin.json
+## 📁 Configuration
+The configuration file (`CS2-SimpleAdmin.json`) will be auto-generated after the first launch. It contains settings for MySQL connections, command permissions, and other plugin-specific configurations.
 
-### Metrics
-From version 1.3.7a, CS2-SimpleAdmin now initiates metrics data collection. This includes gathering essential information such as the `server name`, `server address` and `country`.
-You can disable metrics by set `EnableMetrics` to false in plugin configuration.
+## 🛠️ Development
+This project started as a base for other plugins but has grown into a standalone admin management tool. Contributions are welcome! If you'd like to help with development or have ideas for new features, feel free to submit a pull request or open an issue.
 
-### Colors
-```
-        public static char Default = '\x01';
-        public static char White = '\x01';
-        public static char Darkred = '\x02';
-        public static char Green = '\x04';
-        public static char LightYellow = '\x03';
-        public static char LightBlue = '\x03';
-        public static char Olive = '\x05';
-        public static char Lime = '\x06';
-        public static char Red = '\x07';
-        public static char Purple = '\x03';
-        public static char Grey = '\x08';
-        public static char Yellow = '\x09';
-        public static char Gold = '\x10';
-        public static char Silver = '\x0A';
-        public static char Blue = '\x0B';
-        public static char DarkBlue = '\x0C';
-        public static char BlueGrey = '\x0D';
-        public static char Magenta = '\x0E';
-        public static char LightRed = '\x0F';
-```
-Use color name for e.g. {LightRed}
+## 💡 Credits
+This project is inspired by the work of [Hackmastr](https://github.com/Hackmastr/css-basic-admin/). Thanks for laying the groundwork!
 
-Credits for https://github.com/Hackmastr/css-basic-admin/
+## ❤️ Support the Project
+If you find this plugin helpful and would like to support further development, consider buying me a cup of tea! Your support is greatly appreciated.
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/Y8Y4THKXG)
+
+## 📄 License
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

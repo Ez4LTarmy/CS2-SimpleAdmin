@@ -1,5 +1,6 @@
 ﻿using CounterStrikeSharp.API.Modules.Entities;
 using CS2_SimpleAdmin.Models;
+using CS2_SimpleAdminApi;
 using Dapper;
 using Microsoft.Extensions.Logging;
 
@@ -9,7 +10,7 @@ internal class MuteManager(Database.Database database)
 {
 	public async Task MutePlayer(PlayerInfo player, PlayerInfo? issuer, string reason, int time = 0, int type = 0)
 	{
-		var now = DateTime.UtcNow;
+		var now = Time.ActualDateTime();
 		var futureTime = now.AddMinutes(time);
 
 		var muteType = type switch
@@ -51,7 +52,7 @@ internal class MuteManager(Database.Database database)
 		if (string.IsNullOrEmpty(playerSteamId)) return;
 
 
-		var now = DateTime.UtcNow;
+		var now = Time.ActualDateTime();
 		var futureTime = now.AddMinutes(time);
 
 		var muteType = type switch
@@ -98,7 +99,7 @@ internal class MuteManager(Database.Database database)
 		try
 		{
 			await using var connection = await database.GetConnectionAsync();
-			var currentTime = DateTime.UtcNow;
+			var currentTime = Time.ActualDateTime();
 			var sql = "";
 
 			if (CS2_SimpleAdmin.Instance.Config.MultiServerMode)
@@ -285,7 +286,7 @@ internal class MuteManager(Database.Database database)
 					: "UPDATE sa_mutes SET status = 'EXPIRED' WHERE status = 'ACTIVE' AND `duration` > 0 AND `passed` >= `duration` AND server_id = @serverid";
 			}
 
-			await connection.ExecuteAsync(sql, new { CurrentTime = DateTime.UtcNow, serverid = CS2_SimpleAdmin.ServerId });
+			await connection.ExecuteAsync(sql, new { CurrentTime = Time.ActualDateTime(), serverid = CS2_SimpleAdmin.ServerId });
 		}
 		catch (Exception)
 		{

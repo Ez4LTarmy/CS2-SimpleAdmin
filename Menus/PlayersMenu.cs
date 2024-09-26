@@ -43,13 +43,13 @@ public static class PlayersMenu
 			var enabled = admin.CanTarget(player);
 
 			if (optionName != null)
-				menu.AddMenuOption(optionName, (_, _) =>
+				menu?.AddMenuOption(optionName, (_, _) =>
 					{
 						if (player != null) onSelectAction.Invoke(admin, player);
 					},
 					enabled == false);
 		}
 
-		AdminMenu.OpenMenu(admin, menu);
+		if (menu != null) AdminMenu.OpenMenu(admin, menu);
 	}
 }

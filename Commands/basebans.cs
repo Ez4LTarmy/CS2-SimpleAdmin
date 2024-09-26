@@ -5,8 +5,8 @@ using CounterStrikeSharp.API.Modules.Admin;
 using CounterStrikeSharp.API.Modules.Commands;
 using CounterStrikeSharp.API.Modules.Entities;
 using CounterStrikeSharp.API.ValveConstants.Protobuf;
-using CS2_SimpleAdmin.Enums;
 using CS2_SimpleAdmin.Managers;
+using CS2_SimpleAdminApi;
 
 namespace CS2_SimpleAdmin;
 
@@ -123,6 +123,8 @@ public partial class CS2_SimpleAdmin
 		    else
 			    Helper.LogCommand(caller, command);
 	    }
+	    
+	    SimpleAdminApi?.OnPlayerPenaltiedEvent(playerInfo, adminInfo, PenaltyType.Ban, reason, time);
 	    
 	    Helper.SendDiscordPenaltyMessage(caller, player, reason, time, PenaltyType.Ban, _localizer);
 	}

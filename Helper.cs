@@ -19,7 +19,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using CounterStrikeSharp.API.Core.Translations;
 using CounterStrikeSharp.API.ValveConstants.Protobuf;
-using CS2_SimpleAdmin.Enums;
+using CS2_SimpleAdminApi;
 using Color = Discord.Color;
 
 namespace CS2_SimpleAdmin;
@@ -278,25 +278,39 @@ internal static class Helper
 		// Determine the localized message key
 		var localizedMessageKey = $"{messageKey}";
 
-		var formattedMessageArgs = messageArgs.Select(arg => arg?.ToString() ?? string.Empty).ToArray();
+		var formattedMessageArgs = messageArgs.Select(arg => arg.ToString() ?? string.Empty).ToArray();
 
-		// Replace placeholder based on showActivityType
-		for (var i = 0; i < formattedMessageArgs.Length; i++)
-		{
-			var arg = formattedMessageArgs[i]; // Convert argument to string if not null
-			// Replace "CALLER" placeholder in the argument string
-			formattedMessageArgs[i] = CS2_SimpleAdmin.Instance.Config.OtherSettings.ShowActivityType switch
-			{
-				1 => arg.Replace("CALLER", CS2_SimpleAdmin._localizer["sa_admin"]),
-				2 => arg.Replace("CALLER", callerName ?? "Console"),
-				_ => arg
-			};
-		}
+		// // Replace placeholder based on showActivityType
+		// for (var i = 0; i < formattedMessageArgs.Length; i++)
+		// {
+		// 	var arg = formattedMessageArgs[i]; // Convert argument to string if not null
+		// 	// Replace "CALLER" placeholder in the argument string
+		// 	formattedMessageArgs[i] = CS2_SimpleAdmin.Instance.Config.OtherSettings.ShowActivityType switch
+		// 	{
+		// 		1 => arg.Replace("CALLER", CS2_SimpleAdmin._localizer["sa_admin"]),
+		// 		2 => arg.Replace("CALLER", callerName ?? "Console"),
+		// 		_ => arg
+		// 	};
+		// }
 		
-		foreach (var controller in Helper.GetValidPlayers().Where(c => c is { IsValid: true, IsBot: false }))
+		foreach (var controller in GetValidPlayers().Where(c => c is { IsValid: true, IsBot: false }))
 		{
+			var currentMessageArgs = (string[])formattedMessageArgs.Clone();
+
+			// Replace "CALLER" placeholder based on showActivityType and whether the recipient is an admin
+			for (var i = 0; i < currentMessageArgs.Length; i++)
+			{
+				var arg = currentMessageArgs[i];
+				currentMessageArgs[i] = CS2_SimpleAdmin.Instance.Config.OtherSettings.ShowActivityType switch
+				{
+					1 => arg.Replace("CALLER", AdminManager.PlayerHasPermissions(controller, "@css/kick") || AdminManager.PlayerHasPermissions(controller, "@css/ban") ? callerName : CS2_SimpleAdmin._localizer["sa_admin"]),
+					2 => arg.Replace("CALLER", callerName ?? "Console"),
+					_ => arg
+				};
+			}
+
 			// Send the localized message to each player
-			controller.SendLocalizedMessage(CS2_SimpleAdmin._localizer, localizedMessageKey, formattedMessageArgs.Cast<object>().ToArray());
+			controller.SendLocalizedMessage(CS2_SimpleAdmin._localizer, localizedMessageKey, currentMessageArgs.Cast<object>().ToArray());
 		}
 	}
 	
@@ -344,7 +358,7 @@ internal static class Helper
 	{
 		if (localizer == null) return;
 
-		DiscordPenaltySetting[] penaltySetting = penalty switch
+		var penaltySetting = penalty switch
 		{
 			PenaltyType.Ban => CS2_SimpleAdmin.Instance.Config.Discord.DiscordPenaltyBanSettings,
 			PenaltyType.Mute => CS2_SimpleAdmin.Instance.Config.Discord.DiscordPenaltyMuteSettings,
@@ -587,5 +601,32 @@ public class SchemaString<TSchemaClass>(TSchemaClass instance, string member)
 	private static byte[] GetStringBytes(string str)
 	{
 		return Encoding.UTF8.GetBytes(str);
+	}
+}
+
+public static class Time
+{
+	public static DateTime ActualDateTime()
+	{
+		string timezoneId = CS2_SimpleAdmin.Instance.Config.TimeZone; 
+		DateTime utcNow = DateTime.UtcNow;
+
+		try
+		{
+			TimeZoneInfo timezone = TimeZoneInfo.FindSystemTimeZoneById(timezoneId);
+			DateTime userTime = TimeZoneInfo.ConvertTimeFromUtc(utcNow, timezone);
+        
+			return userTime;
+		}
+		catch (TimeZoneNotFoundException)
+		{
+			CS2_SimpleAdmin._logger?.LogWarning($"Time zone '{timezoneId}' not found. Returning UTC time.");
+			return utcNow;
+		}
+		catch (InvalidTimeZoneException)
+		{
+			CS2_SimpleAdmin._logger?.LogWarning($"Time zone '{timezoneId}' is invalid. Returning UTC time.");
+			return utcNow;
+		}
 	}
 }

@@ -41,10 +41,10 @@ public static class ManageServerMenu
 		foreach (var menuOptionData in options)
 		{
 			var menuName = menuOptionData.Name;
-			menu.AddMenuOption(menuName, (_, _) => { menuOptionData.Action.Invoke(); }, menuOptionData.Disabled);
+			menu?.AddMenuOption(menuName, (_, _) => { menuOptionData.Action.Invoke(); }, menuOptionData.Disabled);
 		}
 
-		AdminMenu.OpenMenu(admin, menu);
+		if (menu != null) AdminMenu.OpenMenu(admin, menu);
 	}
 
 	private static void ChangeMapMenu(CCSPlayerController admin)
@@ -61,10 +61,10 @@ public static class ManageServerMenu
 		foreach (var menuOptionData in options)
 		{
 			var menuName = menuOptionData.Name;
-			menu.AddMenuOption(menuName, (_, _) => { menuOptionData.Action.Invoke(); }, menuOptionData.Disabled);
+			menu?.AddMenuOption(menuName, (_, _) => { menuOptionData.Action.Invoke(); }, menuOptionData.Disabled);
 		}
 
-		AdminMenu.OpenMenu(admin, menu);
+		if (menu != null) AdminMenu.OpenMenu(admin, menu);
 	}
 
 	private static void ExecuteChangeMap(CCSPlayerController admin, string mapName, bool workshop)

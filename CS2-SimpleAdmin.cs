@@ -1,15 +1,14 @@
 ﻿using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Core.Attributes;
+using CounterStrikeSharp.API.Core.Capabilities;
 using CounterStrikeSharp.API.Modules.Commands;
 using CounterStrikeSharp.API.Modules.Commands.Targeting;
 using CounterStrikeSharp.API.Modules.Memory.DynamicFunctions;
 using Discord.Webhook;
-using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using MySqlConnector;
-using System.Collections.Concurrent;
 using CS2_SimpleAdmin.Managers;
-using CS2_SimpleAdmin.Models;
+using CS2_SimpleAdminApi;
 
 namespace CS2_SimpleAdmin;
 
@@ -17,28 +16,6 @@ namespace CS2_SimpleAdmin;
 public partial class CS2_SimpleAdmin : BasePlugin, IPluginConfig<CS2_SimpleAdminConfig>
 {
 	internal static CS2_SimpleAdmin Instance { get; private set; } = new();
-
-	public static IStringLocalizer? _localizer;
-	public static readonly Dictionary<string, int> VoteAnswers = [];
-	public static bool ServerLoaded;
-	private static readonly HashSet<int> GodPlayers = [];
-	private static readonly HashSet<int> SilentPlayers = [];
-	internal static readonly ConcurrentBag<string?> BannedPlayers = [];
-	internal static readonly Dictionary<ulong, string> RenamedPlayers = [];
-	public static bool TagsDetected;
-	public static bool VoteInProgress;
-	public static int? ServerId = null;
-	public static readonly bool UnlockedCommands = CoreConfig.UnlockConCommands;
-	internal static readonly Dictionary<int, PlayerInfo> PlayersInfo = [];
-	internal static readonly List<DisconnectedPlayer> DisconnectedPlayers = [];
-
-	internal static DiscordWebhookClient? DiscordWebhookClientLog;
-
-	internal string DbConnectionString = string.Empty;
-	internal static Database.Database? Database;
-
-	internal static ILogger? _logger;
-	private static MemoryFunctionVoid<CBasePlayerController, CCSPlayerPawn, bool, bool>? _cBasePlayerControllerSetPawnFunc;
 	
 	public override string ModuleName => "CS2-SimpleAdmin" + (Helper.IsDebugBuild ? " (DEBUG)" : " (RELEASE)");
 	public override string ModuleDescription => "Simple admin plugin for Counter-Strike 2 :)";
@@ -50,7 +27,7 @@ public partial class CS2_SimpleAdmin : BasePlugin, IPluginConfig<CS2_SimpleAdmin
 	public override void Load(bool hotReload)
 	{
 		Instance = this;
-
+		
 		RegisterEvents();
 
 		if (hotReload)
@@ -70,13 +47,19 @@ public partial class CS2_SimpleAdmin : BasePlugin, IPluginConfig<CS2_SimpleAdmin
 				});
 			});
 		}
-
 		_cBasePlayerControllerSetPawnFunc = new MemoryFunctionVoid<CBasePlayerController, CCSPlayerPawn, bool, bool>(GameData.GetSignature("CBasePlayerController_SetPawn"));
+		
+		SimpleAdminApi = new Api.CS2_SimpleAdminApi();
+		Capabilities.RegisterPluginCapability(ICS2_SimpleAdminApi.PluginCapability, () => SimpleAdminApi);
 	}
 
 	public override void OnAllPluginsLoaded(bool hotReload)
 	{
 		AddTimer(3.0f, () => ReloadAdmins(null));
+		
+		MenuApi = MenuCapability.Get();
+		if (MenuApi == null) 
+			Logger.LogError("MenuManager Core not found...");
 	}
 
 	public void OnConfigParsed(CS2_SimpleAdminConfig config)

@@ -17,7 +17,7 @@ public class PermissionManager(Database.Database database)
 	/*
 	public async Task<List<(List<string>, int)>> GetAdminFlags(string steamId)
 	{
-		DateTime now = DateTime.UtcNow;
+		DateTime now = Time.ActualDateTime();
 
 		await using MySqlConnection connection = await _database.GetConnectionAsync();
 
@@ -59,7 +59,7 @@ public class PermissionManager(Database.Database database)
 
 	private async Task<List<(string, string, List<string>, int, DateTime?)>> GetAllPlayersFlags()
 	{
-		var now = DateTime.UtcNow;
+		var now = Time.ActualDateTime();
 
 		try
 		{
@@ -390,7 +390,7 @@ public class PermissionManager(Database.Database database)
 	{
 		if (string.IsNullOrEmpty(playerSteamId) || flagsList.Count == 0) return;
 
-		var now = DateTime.UtcNow;
+		var now = Time.ActualDateTime();
 		DateTime? futureTime;
 
 		if (time != 0)
@@ -525,7 +525,7 @@ public class PermissionManager(Database.Database database)
 			await using var connection = await database.GetConnectionAsync();
 
 			const string sql = "DELETE FROM sa_admins WHERE ends IS NOT NULL AND ends <= @CurrentTime";
-			await connection.ExecuteAsync(sql, new { CurrentTime = DateTime.UtcNow });
+			await connection.ExecuteAsync(sql, new { CurrentTime = Time.ActualDateTime() });
 		}
 		catch (Exception)
 		{

@@ -1,4 +1,5 @@
 ﻿using CS2_SimpleAdmin.Models;
+using CS2_SimpleAdminApi;
 using Dapper;
 using Microsoft.Extensions.Logging;
 
@@ -8,7 +9,7 @@ internal class WarnManager(Database.Database database)
 {
 	public async Task WarnPlayer(PlayerInfo player, PlayerInfo? issuer, string reason, int time = 0)
 	{
-		var now = DateTime.UtcNow;
+		var now = Time.ActualDateTime();
 		var futureTime = now.AddMinutes(time);
 
 		try
@@ -39,7 +40,7 @@ internal class WarnManager(Database.Database database)
 		if (string.IsNullOrEmpty(playerSteamId)) return;
 
 
-		var now = DateTime.UtcNow;
+		var now = Time.ActualDateTime();
 		var futureTime = now.AddMinutes(time);
 
 		try
@@ -146,7 +147,7 @@ internal class WarnManager(Database.Database database)
 				? "UPDATE sa_warns SET status = 'EXPIRED' WHERE status = 'ACTIVE' AND `duration` > 0 AND ends <= @CurrentTime"
 				: "UPDATE sa_warns SET status = 'EXPIRED' WHERE status = 'ACTIVE' AND `duration` > 0 AND ends <= @CurrentTime AND server_id = @serverid";
 
-			await connection.ExecuteAsync(sql, new { CurrentTime = DateTime.UtcNow, serverid = CS2_SimpleAdmin.ServerId });
+			await connection.ExecuteAsync(sql, new { CurrentTime = Time.ActualDateTime(), serverid = CS2_SimpleAdmin.ServerId });
 		}
 		catch (Exception ex) 
 		{

@@ -6,22 +6,24 @@ namespace CS2_SimpleAdmin.Menus;
 
 public static class AdminMenu
 {
-	public static BaseMenu CreateMenu(string title)
+	public static IMenu? CreateMenu(string title)
 	{
-		return CS2_SimpleAdmin.Instance.Config.UseChatMenu ? new ChatMenu(title) : new CenterHtmlMenu(title, CS2_SimpleAdmin.Instance);
+		return CS2_SimpleAdmin.MenuApi?.NewMenu(title);
+		// return CS2_SimpleAdmin.Instance.Config.UseChatMenu ? new ChatMenu(title) : new CenterHtmlMenu(title, CS2_SimpleAdmin.Instance);
 	}
 
-	public static void OpenMenu(CCSPlayerController player, BaseMenu menu)
+	public static void OpenMenu(CCSPlayerController player, IMenu menu)
 	{
-		switch (menu)
-		{
-			case CenterHtmlMenu centerHtmlMenu:
-				MenuManager.OpenCenterHtmlMenu(CS2_SimpleAdmin.Instance, player, centerHtmlMenu);
-				break;
-			case ChatMenu chatMenu:
-				MenuManager.OpenChatMenu(player, chatMenu);
-				break;
-		}
+		menu.Open(player);
+		// switch (menu)
+		// {
+		// 	case CenterHtmlMenu centerHtmlMenu:
+		// 		MenuManager.OpenCenterHtmlMenu(CS2_SimpleAdmin.Instance, player, centerHtmlMenu);
+		// 		break;
+		// 	case ChatMenu chatMenu:
+		// 		MenuManager.OpenChatMenu(player, chatMenu);
+		// 		break;
+		// }
 	}
 
 	public static void OpenMenu(CCSPlayerController admin)
@@ -59,9 +61,9 @@ public static class AdminMenu
 		foreach (var menuOptionData in options)
 		{
 			var menuName = menuOptionData.Name;
-			menu.AddMenuOption(menuName, (_, _) => { menuOptionData.Action.Invoke(); }, menuOptionData.Disabled);
+			menu?.AddMenuOption(menuName, (_, _) => { menuOptionData.Action.Invoke(); }, menuOptionData.Disabled);
 		}
 
-		OpenMenu(admin, menu);
+		if (menu != null) OpenMenu(admin, menu);
 	}
 }

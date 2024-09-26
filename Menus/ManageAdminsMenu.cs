@@ -34,10 +34,10 @@ public static class ManageAdminsMenu
 		foreach (var menuOptionData in options)
 		{
 			var menuName = menuOptionData.Name;
-			menu.AddMenuOption(menuName, (_, _) => { menuOptionData.Action.Invoke(); }, menuOptionData.Disabled);
+			menu?.AddMenuOption(menuName, (_, _) => { menuOptionData.Action.Invoke(); }, menuOptionData.Disabled);
 		}
 
-		AdminMenu.OpenMenu(admin, menu);
+		if (menu != null) AdminMenu.OpenMenu(admin, menu);
 	}
 
 	private static void AddAdminMenu(CCSPlayerController admin, CCSPlayerController player)
@@ -47,10 +47,10 @@ public static class ManageAdminsMenu
 		foreach (var adminFlag in CS2_SimpleAdmin.Instance.Config.MenuConfigs.AdminFlags)
 		{
 			var disabled = AdminManager.PlayerHasPermissions(player, adminFlag.Flag);
-			menu.AddMenuOption(adminFlag.Name, (_, _) => { AddAdmin(admin, player, adminFlag.Flag); }, disabled);
+			menu?.AddMenuOption(adminFlag.Name, (_, _) => { AddAdmin(admin, player, adminFlag.Flag); }, disabled);
 		}
 
-		AdminMenu.OpenMenu(admin, menu);
+		if (menu != null) AdminMenu.OpenMenu(admin, menu);
 	}
 
 	private static void AddAdmin(CCSPlayerController admin, CCSPlayerController player, string flag)

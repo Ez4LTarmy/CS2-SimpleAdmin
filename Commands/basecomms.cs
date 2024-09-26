@@ -3,8 +3,8 @@ using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Core.Attributes.Registration;
 using CounterStrikeSharp.API.Modules.Admin;
 using CounterStrikeSharp.API.Modules.Commands;
-using CS2_SimpleAdmin.Enums;
 using CS2_SimpleAdmin.Managers;
+using CS2_SimpleAdminApi;
 
 namespace CS2_SimpleAdmin;
 
@@ -45,7 +45,7 @@ public partial class CS2_SimpleAdmin
 		});
 	}
 
-	internal static void Gag(CCSPlayerController? caller, CCSPlayerController player, int time, string reason, string? callerName = null, MuteManager? muteManager = null, CommandInfo? command = null, bool silent = false)
+	internal void Gag(CCSPlayerController? caller, CCSPlayerController player, int time, string reason, string? callerName = null, MuteManager? muteManager = null, CommandInfo? command = null, bool silent = false)
 	{
 		if (Database == null || !player.IsValid || !player.UserId.HasValue) return;
 		if (!caller.CanTarget(player)) return;
@@ -63,12 +63,6 @@ public partial class CS2_SimpleAdmin
 		{
 			await muteManager.MutePlayer(playerInfo, adminInfo, reason, time);
 		});
-
-		// Execute tag mute if needed
-		if (TagsDetected)
-		{
-			Server.ExecuteCommand($"css_tag_mute {player.SteamID}");
-		}
 
 		// Add penalty to the player's penalty manager
 		PlayerPenaltyManager.AddPenalty(player.Slot, PenaltyType.Gag, DateTime.Now.AddMinutes(time), time);
@@ -194,9 +188,6 @@ public partial class CS2_SimpleAdmin
 			{
 				PlayerPenaltyManager.RemovePenaltiesByType(player.Slot, PenaltyType.Gag);
 
-				if (TagsDetected)
-					Server.ExecuteCommand($"css_tag_unmute {player.SteamID}");
-
 				Task.Run(async () =>
 				{
 					await muteManager.UnmutePlayer(player.SteamID.ToString(), callerSteamId, reason);
@@ -217,9 +208,6 @@ public partial class CS2_SimpleAdmin
 
 			if (namePlayer.UserId.HasValue && PlayersInfo[namePlayer.UserId.Value].TotalGags > 0) 
 				PlayersInfo[namePlayer.UserId.Value].TotalGags--;
-
-			if (TagsDetected)
-				Server.ExecuteCommand($"css_tag_unmute {namePlayer.SteamID}");
 
 			Task.Run(async () =>
 			{
@@ -274,7 +262,7 @@ public partial class CS2_SimpleAdmin
 		});
 	}
 
-	internal static void Mute(CCSPlayerController? caller, CCSPlayerController player, int time, string reason, string? callerName = null, MuteManager? muteManager = null, CommandInfo? command = null, bool silent = false)
+	internal void Mute(CCSPlayerController? caller, CCSPlayerController player, int time, string reason, string? callerName = null, MuteManager? muteManager = null, CommandInfo? command = null, bool silent = false)
 	{
 		if (Database == null || !player.IsValid || !player.UserId.HasValue) return;
 		if (!caller.CanTarget(player)) return;
@@ -496,7 +484,7 @@ public partial class CS2_SimpleAdmin
 		});
 	}
 		
-	internal static void Silence(CCSPlayerController? caller, CCSPlayerController player, int time, string reason, string? callerName = null, MuteManager? muteManager = null, CommandInfo? command = null, bool silent = false)
+	internal void Silence(CCSPlayerController? caller, CCSPlayerController player, int time, string reason, string? callerName = null, MuteManager? muteManager = null, CommandInfo? command = null, bool silent = false)
 	{
 		if (Database == null || !player.IsValid || !player.UserId.HasValue) return;
 		if (!caller.CanTarget(player)) return;
@@ -514,12 +502,6 @@ public partial class CS2_SimpleAdmin
 		{
 			await muteManager.MutePlayer(playerInfo, adminInfo, reason, time, 2); // Assuming 2 is the type for silence
 		});
-
-		// Execute tag mute if needed
-		if (TagsDetected)
-		{
-			Server.ExecuteCommand($"css_tag_mute {player.SteamID}");
-		}
 
 		// Add penalty to the player's penalty manager
 		PlayerPenaltyManager.AddPenalty(player.Slot, PenaltyType.Silence, DateTime.Now.AddMinutes(time), time);
@@ -648,9 +630,6 @@ public partial class CS2_SimpleAdmin
 	            // Reset voice flags to normal
 	            player.VoiceFlags = VoiceFlags.Normal;
 
-	            if (TagsDetected)
-	                Server.ExecuteCommand($"css_tag_unmute {player.SteamID}");
-
 	            Task.Run(async () =>
 	            {
 	                await muteManager.UnmutePlayer(player.SteamID.ToString(), callerSteamId, reason, 2); // Unmute by type 2 (silence)
@@ -674,9 +653,6 @@ public partial class CS2_SimpleAdmin
 
 	        if (namePlayer.UserId.HasValue && PlayersInfo[namePlayer.UserId.Value].TotalSilences > 0) 
 	            PlayersInfo[namePlayer.UserId.Value].TotalSilences--;
-
-	        if (TagsDetected)
-	            Server.ExecuteCommand($"css_tag_unmute {namePlayer.SteamID}");
 
 	        Task.Run(async () =>
 	        {

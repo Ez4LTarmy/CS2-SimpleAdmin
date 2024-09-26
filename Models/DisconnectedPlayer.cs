@@ -9,7 +9,7 @@ public class DisconnectedPlayer(
 	DateTime disconnectTime)
 {
 	public SteamID SteamId { get; } = steamId;
-	public string Name { get; } = name;
-	public string? IpAddress { get; } = ipAddress;
+	public string Name { get; set; } = name;
+	public string? IpAddress { get; set; } = ipAddress;
 	public DateTime DisconnectTime = disconnectTime;
 }

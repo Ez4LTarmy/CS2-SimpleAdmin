@@ -2,6 +2,7 @@
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.ValveConstants.Protobuf;
 using CS2_SimpleAdmin.Models;
+using CS2_SimpleAdminApi;
 using Dapper;
 using Microsoft.Extensions.Logging;
 using MySqlConnector;
@@ -12,7 +13,7 @@ internal class BanManager(Database.Database database, CS2_SimpleAdminConfig conf
 {
 	public async Task BanPlayer(PlayerInfo player, PlayerInfo? issuer, string reason, int time = 0)
 	{
-		DateTime now = DateTime.UtcNow;
+		DateTime now = Time.ActualDateTime();
 		DateTime futureTime = now.AddMinutes(time);
 
 		await using MySqlConnection connection = await database.GetConnectionAsync();
@@ -43,7 +44,7 @@ internal class BanManager(Database.Database database, CS2_SimpleAdminConfig conf
 	{
 		if (string.IsNullOrEmpty(playerSteamId)) return;
 
-		DateTime now = DateTime.UtcNow;
+		DateTime now = Time.ActualDateTime();
 		DateTime futureTime = now.AddMinutes(time);
 
 		try
@@ -72,7 +73,7 @@ internal class BanManager(Database.Database database, CS2_SimpleAdminConfig conf
 	{
 		if (string.IsNullOrEmpty(playerIp)) return;
 
-		DateTime now = DateTime.UtcNow;
+		DateTime now = Time.ActualDateTime();
 		DateTime futureTime = now.AddMinutes(time);
 
 		try
@@ -111,7 +112,7 @@ internal class BanManager(Database.Database database, CS2_SimpleAdminConfig conf
 
 		int banCount;
 
-		DateTime currentTime = DateTime.UtcNow;
+		DateTime currentTime = Time.ActualDateTime();
 
 		try
 		{
@@ -341,7 +342,7 @@ internal class BanManager(Database.Database database, CS2_SimpleAdminConfig conf
 
 	public async Task ExpireOldBans()
 	{
-		var currentTime = DateTime.UtcNow;
+		var currentTime = Time.ActualDateTime();
 
 		try
 		{

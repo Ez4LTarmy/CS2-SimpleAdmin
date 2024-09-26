@@ -3,8 +3,7 @@ using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Modules.Admin;
 using CounterStrikeSharp.API.Modules.Entities;
 using CounterStrikeSharp.API.ValveConstants.Protobuf;
-using CS2_SimpleAdmin.Enums;
-using CS2_SimpleAdmin.Models;
+using CS2_SimpleAdminApi;
 using Dapper;
 using Microsoft.Extensions.Logging;
 
@@ -156,13 +155,6 @@ public class PlayerManager
 							// Apply mute penalty based on mute type
 							case "GAG":
 								PlayerPenaltyManager.AddPenalty(CS2_SimpleAdmin.PlayersInfo[userId].Slot, PenaltyType.Gag, ends, duration);
-								await Server.NextFrameAsync(() =>
-								{
-									if (CS2_SimpleAdmin.TagsDetected)
-									{
-										Server.ExecuteCommand($"css_tag_mute {CS2_SimpleAdmin.PlayersInfo[userId].SteamId}");
-									}
-								});
 								// if (CS2_SimpleAdmin._localizer != null)
 								// 	mutesList[PenaltyType.Gag].Add(CS2_SimpleAdmin._localizer["sa_player_penalty_info_active_gag", ends.ToLocalTime().ToString(CultureInfo.CurrentCulture)]);
 								break;
@@ -180,10 +172,6 @@ public class PlayerManager
 								await Server.NextFrameAsync(() =>
 								{
 									player.VoiceFlags = VoiceFlags.Muted;
-									if (CS2_SimpleAdmin.TagsDetected)
-									{
-										Server.ExecuteCommand($"css_tag_mute {CS2_SimpleAdmin.PlayersInfo[userId].SteamId}");
-									}
 								});
 								// if (CS2_SimpleAdmin._localizer != null)
 								// 	mutesList[PenaltyType.Silence].Add(CS2_SimpleAdmin._localizer["sa_player_penalty_info_active_silence", ends.ToLocalTime().ToString(CultureInfo.CurrentCulture)]);
@@ -312,19 +300,10 @@ public class PlayerManager
 								if (!PlayerPenaltyManager.IsPenalized(player.Slot, PenaltyType.Mute) && !PlayerPenaltyManager.IsPenalized(player.Slot, PenaltyType.Silence))
 									player.VoiceFlags = VoiceFlags.Normal;
 
-								if (!PlayerPenaltyManager.IsPenalized(player.Slot, PenaltyType.Gag) && !PlayerPenaltyManager.IsPenalized(player.Slot, PenaltyType.Silence))
-								{
-									if (CS2_SimpleAdmin.TagsDetected)
-										Server.ExecuteCommand($"css_tag_unmute {player.SteamID}");
-								}
-
 								if (PlayerPenaltyManager.IsPenalized(player.Slot, PenaltyType.Silence) ||
 									PlayerPenaltyManager.IsPenalized(player.Slot, PenaltyType.Mute) ||
 									PlayerPenaltyManager.IsPenalized(player.Slot, PenaltyType.Gag)) continue;
 								player.VoiceFlags = VoiceFlags.Normal;
-
-								if (CS2_SimpleAdmin.TagsDetected)
-									Server.ExecuteCommand($"css_tag_unmute {player.SteamID}");
 							}
 
 							PlayerPenaltyManager.RemoveExpiredPenalties();

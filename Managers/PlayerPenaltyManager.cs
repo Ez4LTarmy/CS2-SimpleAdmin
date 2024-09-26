@@ -1,5 +1,5 @@
 ﻿using System.Collections.Concurrent;
-using CS2_SimpleAdmin.Enums;
+using CS2_SimpleAdminApi;
 
 namespace CS2_SimpleAdmin.Managers;
 
@@ -44,7 +44,7 @@ public class PlayerPenaltyManager
 		if (CS2_SimpleAdmin.Instance.Config.OtherSettings.TimeMode == 0)
 			return penaltiesList.Count != 0;
 
-		var now = DateTime.UtcNow;
+		var now = Time.ActualDateTime();
 
 		// Check if any active penalties exist
 		foreach (var penalty in penaltiesList.ToList())
@@ -161,7 +161,7 @@ public class PlayerPenaltyManager
 			return;
 		}
 		
-		var now = DateTime.UtcNow;
+		var now = Time.ActualDateTime();
 		foreach (var (playerSlot, penaltyDict) in Penalties.ToList()) // Use ToList to avoid modification while iterating
 		{
 			// Remove expired penalties for the player
