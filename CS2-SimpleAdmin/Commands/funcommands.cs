@@ -60,7 +60,7 @@ public partial class CS2_SimpleAdmin
         }
     }
     
-    [RequiresPermissions("@css/cheats")]
+    [RequiresPermissions("@css/slay")]
     [CommandHelper(minArgs: 1, usage: "<#userid or name>", whoCanExecute: CommandUsage.CLIENT_AND_SERVER)]
     public void OnGodCommand(CCSPlayerController? caller, CommandInfo command)
     {
