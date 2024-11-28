@@ -32,7 +32,7 @@ public class CS2_SimpleAdmin_CleanModule: BasePlugin
 
     [ConsoleCommand("css_clean")]
     [ConsoleCommand("css_clear")]
-    [RequiresPermissions("@css/cheat")]
+    [RequiresPermissions("@css/slay")]
     public void OnCleanCommand(CCSPlayerController? caller, CommandInfo commandInfo)
     {
         var weapons = Utilities.FindAllEntitiesByDesignerName<CCSWeaponBaseGun>("weapon_");
